@@ -1,0 +1,12 @@
+channels:
+ - bioconda
+ - r
+dependencies:
+ - bedtools
+ - python=3.6
+ - samtools
+ - r >= 3.5.0
+ - r-dplyr
+ - r-docopt
+ - bioconductor-genomicranges
+ - bcftools

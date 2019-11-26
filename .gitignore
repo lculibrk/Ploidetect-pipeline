@@ -1,0 +1,4 @@
+data/
+resources/hg19*
+.snakemake
+*~
