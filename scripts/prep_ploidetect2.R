@@ -12,8 +12,8 @@ library(devtools)
 library(Ploidetect)
 args = docopt(doc)
 
-all_data = read.table()
+
+all_data = read.table(args$input, header = F, sep = "\t", skip = 1, stringsAsFactors = F)
+#all_data = read.table()
 out = ploidetect_presegment(all_data)
 saveRDS(out, args$output)
-
-#read.table(args$input, header = F, sep = "\t", skip = 1, stringsAsFactors = F)

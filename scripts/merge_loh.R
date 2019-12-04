@@ -12,7 +12,7 @@ Options:
 library(docopt)
 library(dplyr)
 library(GenomicRanges)
-source("Ploidetect/R/merge_mafs.R")
+source("scripts/merge_mafs.R")
 args <- docopt(doc)
 print(args)
 if(args$loh == "STDIN"){

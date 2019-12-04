@@ -1,4 +1,7 @@
+.gitignore
 data/
 resources/hg19*
 .snakemake
 *~
+pog_libs.py
+Rplots.pdf
