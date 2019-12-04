@@ -5,7 +5,7 @@ cases=config["bams"].keys()
 
 rule all:
     input:
-        expand("data/{id}/merged.bed", id = cases)
+        expand("data/{id}/segmented.RDS", id = cases)
     
 rule germline_cov:
     input:
@@ -48,13 +48,14 @@ rule splitwindowfile:
 rule genomecovsomatic:
     input:
             lambda wildcards: config["bams"][wildcards.id]["somatic"],
+            lambda wildcards: config["bams"][wildcards.id]["normal"],
             window=rules.splitwindowfile.output
     output:
             "data/{id}/tumour/{chr}.bed"
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
-            "bedtools multicov -bams {input[0]} -q 20 -bed {input.window}  > {output}"
+            "bedtools multicov -bams {input[0]} {input[1]} -q 20 -bed {input.window}  > {output}"
 
 rule mergesomatic:
     input:
@@ -71,7 +72,7 @@ rule compute_loh:
             normbam=lambda wildcards: config["bams"][wildcards.id]["normal"],
             sombam=lambda wildcards: config["bams"][wildcards.id]["somatic"]
     output:
-            "data/{id}/loh_raw.txt"
+            "data/{id}/loh_tmp/loh_raw.txt"
     params:
             genome=config["genome"]
     conda:
@@ -85,6 +86,8 @@ rule process_loh:
             window=rules.makewindowfile.output
     output:
             "data/{id}/loh.bed"
+    conda:
+            "conda_configs/sequence_processing.yaml"
     shell:
             "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh} | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}' | bedtools sort -i stdin | Rscript scripts/merge_loh.R -l STDIN -w {input.window} -o {output}"
 
@@ -111,7 +114,7 @@ rule mergedbed:
     conda:
                 "conda_configs/sequence_processing.yaml"
     shell:
-                "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
+                "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
 
 rule preseg:
     input:
