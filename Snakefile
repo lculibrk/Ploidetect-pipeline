@@ -1,5 +1,12 @@
+import glob
+import os
 configfile: "./CONFIG.txt"
 chromosomes=config["chromosomes"]
+genome=config["genome_name"]
+
+array_positions = glob.glob(os.path.join("resources/snp_arrays", genome, "SNP_array_positions.txt"))[0]
+
+print(array_positions)
 
 cases=config["bams"].keys()
 
@@ -78,7 +85,7 @@ rule compute_loh:
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
-            "bash scripts/get_allele_freqs.bash {input.normbam} {input.sombam} {params.genome} resources/SNP_array_positions.txt data/{wildcards.id}/loh_tmp/"
+            "bash scripts/get_allele_freqs.bash {input.normbam} {input.sombam} {params.genome} " + array_positions +  " data/{wildcards.id}/loh_tmp/"
 
 rule process_loh:
     input:

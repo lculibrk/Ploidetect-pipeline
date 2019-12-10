@@ -1,4 +1,5 @@
 genome: /projects/lculibrk_prj/CNV/Ploidetect/file_dependencies/hg19.fa
+genome_name: "hg19"
 bams:
     POG001:
         somatic: /projects/POG/POG_data/POG001/wgs/biop1_t_A10504/snv/hg19a_bwa-0.5.7/A10504_8_lanes_dupsFlagged.bam
