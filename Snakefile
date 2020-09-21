@@ -12,7 +12,7 @@ cases=config["bams"].keys()
 
 rule all:
     input:
-        expand("data/{id}/segmented.RDS", id = cases)
+        expand("output/{id}/cna.txt", id = cases)
     
 rule germline_cov:
     input:
@@ -123,10 +123,51 @@ rule mergedbed:
     shell:
                 "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
 
+rule install_pdt:
+    output:
+        "pdt_installed.txt"
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    shell:
+        "Rscript -e \"devtools::install_github('lculibrk/Ploidetect')\""
+
 rule preseg:
     input:
         "data/{id}/merged.bed"
     output:
         "data/{id}/segmented.RDS"
+    conda:
+        "conda_configs/sequence_processing.yaml"
     shell:
         "Rscript scripts/prep_ploidetect2.R -i {input} -o {output}"
+
+rule ploidetect:
+    input:
+        rules.preseg.output,
+	rules.install_pdt.output
+    output:
+        "output/{id}/plots.pdf",
+        "output/{id}/models.txt",
+        "output/{id}/meta.RDS"
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    resources: cpus=24, mem_mb=189600
+    shell:
+        "Rscript scripts/run_ploidetect2.R -i {input[0]} -o {output[1]} -p {output[0]} -r {output[2]}"
+
+rule ploidetect_copynumber:
+    input:
+        "output/{id}/models.txt",
+        "data/{id}/segmented.RDS",
+        "output/{id}/plots.pdf"
+    output:
+        "output/{id}/cna.txt",
+        "output/{id}/cna_plots.pdf"
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    log:
+        "output/{id}/cna_log.txt"
+    resources: cpus=24, mem_mb=189600
+    shell:
+        "Rscript scripts/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
+												    

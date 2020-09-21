@@ -10,3 +10,4 @@ dependencies:
  - r-docopt
  - bioconductor-genomicranges
  - bcftools
+ - r-devtools
