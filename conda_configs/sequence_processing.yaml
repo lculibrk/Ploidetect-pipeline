@@ -11,3 +11,4 @@ dependencies:
  - bioconductor-genomicranges
  - bcftools
  - r-devtools
+ - r-tidyr
