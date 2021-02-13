@@ -5,7 +5,7 @@ dependencies:
  - bedtools
  - python=3.6
  - samtools
- - r >= 3.5.0
+ - r-essentials
  - r-dplyr
  - r-docopt
  - bioconductor-genomicranges

@@ -1,0 +1,7 @@
+channels:
+ - r
+dependencies:
+ - r-essentials
+ - r-docopt
+ - r-data.table
+ - r-devtools

@@ -6,3 +6,4 @@ resources/hg19*
 pog_libs.py
 Rplots.pdf
 resources/snp_arrays/mm10/*
+nohup.out

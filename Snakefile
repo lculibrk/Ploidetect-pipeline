@@ -127,9 +127,9 @@ rule install_pdt:
     output:
         "pdt_installed.txt"
     conda:
-        "conda_configs/sequence_processing.yaml"
+        "conda_configs/r.yaml"
     shell:
-        "Rscript -e \"devtools::install_github('lculibrk/Ploidetect')\""
+        "Rscript -e \"devtools::install_github('lculibrk/Ploidetect')\"; touch {output}"
 
 rule preseg:
     input:
@@ -137,7 +137,7 @@ rule preseg:
     output:
         "data/{id}/segmented.RDS"
     conda:
-        "conda_configs/sequence_processing.yaml"
+        "conda_configs/r.yaml"
     shell:
         "Rscript scripts/prep_ploidetect2.R -i {input} -o {output}"
 
@@ -150,7 +150,7 @@ rule ploidetect:
         "output/{id}/models.txt",
         "output/{id}/meta.RDS"
     conda:
-        "conda_configs/sequence_processing.yaml"
+        "conda_configs/r.yaml"
     resources: cpus=24, mem_mb=189600
     shell:
         "Rscript scripts/run_ploidetect2.R -i {input[0]} -o {output[1]} -p {output[0]} -r {output[2]}"
@@ -164,7 +164,7 @@ rule ploidetect_copynumber:
         "output/{id}/cna.txt",
         "output/{id}/cna_plots.pdf"
     conda:
-        "conda_configs/sequence_processing.yaml"
+        "conda_configs/r.yaml"
     log:
         "output/{id}/cna_log.txt"
     resources: cpus=24, mem_mb=189600
