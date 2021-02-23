@@ -129,7 +129,7 @@ rule install_pdt:
     conda:
         "conda_configs/r.yaml"
     shell:
-        "Rscript -e \"devtools::install_github('lculibrk/Ploidetect')\"; touch {output}"
+        "R REMOTES_NO_ERRORS_FROM_WARNINGS=\"true\"; Rscript -e \"devtools::install_github('lculibrk/Ploidetect')\"; touch {output}"
 
 rule preseg:
     input:
