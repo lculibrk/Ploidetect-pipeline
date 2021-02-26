@@ -4,21 +4,18 @@ configfile: "./CONFIG.txt"
 chromosomes=config["chromosomes"]
 genome=config["genome_name"]
 
-array_positions = glob.glob(os.path.join("resources/snp_arrays", genome, "SNP_array_positions.txt"))[0]
-
-print(array_positions)
-
-cases=config["bams"].keys()
+output_dir = config["output_dir"]
+temp_dir = config["temp_dir"] if config["temp_dir"] else output_dir + "/temp"
 
 rule all:
     input:
-        expand("output/{id}/cna.txt", id = cases)
-    
+        expand("{output_dir}/cna.txt", output_dir=output_dir)
+
 rule germline_cov:
     input:
-            lambda wildcards: config["bams"][wildcards.id]["normal"]
+            config["bams"]["normal"]
     output:
-            "data/{id}/normal/{chr}.bed"
+            temp("{temp_dir}/normal/{chr}.bed")
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
@@ -26,9 +23,9 @@ rule germline_cov:
 
 rule merge_germline:
     input:
-            expand("data/{{id}}/normal/{chr}.bed", chr=chromosomes)
+            expand("{temp_dir}/normal/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
     output:
-            "data/{id}/germline.bed"
+            temp("{temp_dir}/germline.bed")
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
@@ -38,7 +35,7 @@ rule makewindowfile:
     input:
             rules.merge_germline.output
     output:
-            "data/{id}/windows.txt"
+            temp("{temp_dir}/windows.txt")
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
@@ -47,28 +44,28 @@ rule splitwindowfile:
     input:
             rules.makewindowfile.output
     output:
-            "data/{id}/windows/{chr}.txt"
+            temp("{temp_dir}/windows/{chr}.txt")
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
             "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
 rule genomecovsomatic:
     input:
-            lambda wildcards: config["bams"][wildcards.id]["somatic"],
-            lambda wildcards: config["bams"][wildcards.id]["normal"],
+            sombam=config["bams"]["somatic"],
+            nombam=config["bams"]["normal"],
             window=rules.splitwindowfile.output
     output:
-            "data/{id}/tumour/{chr}.bed"
+            temp("{temp_dir}/tumour/{chr}.bed")
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
-            "bedtools multicov -bams {input[0]} {input[1]} -q 20 -bed {input.window}  > {output}"
+            "bedtools multicov -bams {input.sombam} {input.nombam} -q 20 -bed {input.window}  > {output}"
 
 rule mergesomatic:
     input:
-            expand("data/{{id}}/tumour/{chr}.bed", chr=chromosomes)
+            expand("{temp_dir}/tumour/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
     output:
-            "data/{id}/tumour.bed"
+            temp("{temp_dir}/tumour.bed")
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
@@ -76,23 +73,25 @@ rule mergesomatic:
 
 rule compute_loh:
     input:
-            normbam=lambda wildcards: config["bams"][wildcards.id]["normal"],
-            sombam=lambda wildcards: config["bams"][wildcards.id]["somatic"]
+            normbam = config["bams"]["normal"],
+            sombam = config["bams"]["somatic"]
     output:
-            "data/{id}/loh_tmp/loh_raw.txt"
+            temp("{temp_dir}/loh_tmp/loh_raw.txt")
     params:
-            genome=config["genome"]
+            genome=config["genome"],
+            array_positions=config["array_positions"]
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
-            "bash scripts/get_allele_freqs.bash {input.normbam} {input.sombam} {params.genome} " + array_positions +  " data/{wildcards.id}/loh_tmp/"
+            "bash scripts/get_allele_freqs.bash {input.normbam} {input.sombam}"
+            " {params.genome} {params.array_positions} {temp_dir}/loh_tmp/"
 
 rule process_loh:
     input:
             loh=rules.compute_loh.output,
             window=rules.makewindowfile.output
     output:
-            "data/{id}/loh.bed"
+            temp("{temp_dir}/loh.bed")
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
@@ -102,7 +101,7 @@ rule getgc:
     input:
                 window=rules.makewindowfile.output
     output:
-                "data/{id}/gc.bed"
+                temp("{temp_dir}/gc.bed")
     params:
                 genome=config["genome"]
     conda:
@@ -117,7 +116,7 @@ rule mergedbed:
                 normal=rules.merge_germline.output,
 		loh=rules.process_loh.output
     output:
-                "data/{id}/merged.bed"
+                temp("{temp_dir}/merged.bed")
     conda:
                 "conda_configs/sequence_processing.yaml"
     shell:
@@ -133,9 +132,9 @@ rule install_pdt:
 
 rule preseg:
     input:
-        "data/{id}/merged.bed"
+        expand("{temp_dir}/merged.bed", temp_dir=temp_dir)
     output:
-        "data/{id}/segmented.RDS"
+        temp(expand("{temp_dir}/segmented.RDS", temp_dir=temp_dir))
     conda:
         "conda_configs/r.yaml"
     shell:
@@ -146,9 +145,9 @@ rule ploidetect:
         rules.preseg.output,
 	rules.install_pdt.output
     output:
-        "output/{id}/plots.pdf",
-        "output/{id}/models.txt",
-        "output/{id}/meta.RDS"
+        "{output_dir}/plots.pdf",
+        "{output_dir}/models.txt",
+        "{output_dir}/meta.RDS"
     conda:
         "conda_configs/r.yaml"
     resources: cpus=24, mem_mb=189600
@@ -157,17 +156,16 @@ rule ploidetect:
 
 rule ploidetect_copynumber:
     input:
-        "output/{id}/models.txt",
-        "data/{id}/segmented.RDS",
-        "output/{id}/plots.pdf"
+        "{output_dir}/models.txt",
+        expand("{temp_dir}/segmented.RDS", temp_dir=temp_dir),
+        "{output_dir}/plots.pdf"
     output:
-        "output/{id}/cna.txt",
-        "output/{id}/cna_plots.pdf"
+        "{output_dir}/cna.txt",
+        "{output_dir}/cna_plots.pdf"
     conda:
         "conda_configs/r.yaml"
     log:
-        "output/{id}/cna_log.txt"
+        "{output_dir}/cna_log.txt"
     resources: cpus=24, mem_mb=189600
     shell:
         "Rscript scripts/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
-												    

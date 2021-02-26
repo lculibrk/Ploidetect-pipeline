@@ -1,10 +1,14 @@
-genome: /projects/lculibrk_prj/CNV/Ploidetect/file_dependencies/hg19.fa
-genome_name: "hg19"
+id: COLO829-TestA
 bams:
-    COLO829:
-        somatic: /projects/POG/POG_data/COLO829-TestA/wgs/biop1_t_A36971/merge/hg19a_bwa-mem-0.7.6a/A36971_2_lanes_dupsFlagged.bam
-        normal: /projects/POG/POG_data/COLO829-TestA/wgs/blood1_n_A36973/merge/hg19a_bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam
+    somatic: /projects/POG/POG_data/COLO829-TestA/wgs/biop1_t_A36971/merge/hg19a_bwa-mem-0.7.6a/A36971_2_lanes_dupsFlagged.bam
+    normal: /projects/POG/POG_data/COLO829-TestA/wgs/blood1_n_A36973/merge/hg19a_bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam
 
+output_dir: "ploidetect"
+temp_dir:
+
+genome_name: "hg19"
+genome: /projects/lculibrk_prj/CNV/Ploidetect/file_dependencies/hg19.fa
+array_positions: "resources/snp_arrays/hg19/SNP_array_positions.txt"
 chromosomes:
  - 1
  - 2
@@ -29,4 +33,3 @@ chromosomes:
  - 21
  - 22
  - X
-
