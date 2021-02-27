@@ -11,9 +11,18 @@ ploidetect_local_clone: /gsc/pipelines/Ploidetect/v1.0.0
 # ploidetect_github_version should be a branch or tag.
 ploidetect_github_version: master
 
-genome_name: "hg19"
-genome: /projects/lculibrk_prj/CNV/Ploidetect/file_dependencies/hg19.fa
-array_positions: "resources/snp_arrays/hg19/SNP_array_positions.txt"
+genome_name:
+    "hg19"
+genome:
+    hg19:
+        /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
+    hg38:
+        /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
+array_positions:
+    hg19:
+        "resources/snp_arrays/hg19/SNP_array_positions.txt"
+    hg38:
+        "resources/snp_arrays/hg38/SNP_array_positions.txt"
 chromosomes:
  - 1
  - 2
