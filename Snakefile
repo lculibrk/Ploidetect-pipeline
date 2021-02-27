@@ -1,11 +1,11 @@
 import glob
 import os
 configfile: "./CONFIG.txt"
-chromosomes=config["chromosomes"]
-genome=config["genome_name"]
 
+chromosomes=config["chromosomes"]
 output_dir = config["output_dir"]
 temp_dir = config["temp_dir"] if config["temp_dir"] else output_dir + "/temp"
+
 
 rule all:
     input:
@@ -71,6 +71,7 @@ rule mergesomatic:
     shell:
             "cat {input} | bedtools sort -i stdin > {output}"
 
+
 rule compute_loh:
     input:
             normbam = config["bams"]["normal"],
@@ -78,8 +79,8 @@ rule compute_loh:
     output:
             temp("{temp_dir}/loh_tmp/loh_raw.txt")
     params:
-            genome=config["genome"],
-            array_positions=config["array_positions"]
+            genome=config["genome"][config["genome_name"]],
+            array_positions=config["array_positions"][config["genome_name"]]
     conda:
             "conda_configs/sequence_processing.yaml"
     shell:
@@ -103,7 +104,7 @@ rule getgc:
     output:
                 temp("{temp_dir}/gc.bed")
     params:
-                genome=config["genome"]
+                genome=config["genome"][config["genome_name"]]
     conda:
                 "conda_configs/sequence_processing.yaml"
     shell:
