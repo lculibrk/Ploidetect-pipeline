@@ -1,0 +1,21 @@
+channels:
+ - bioconda
+ - r
+dependencies:
+ - python=3.8
+ - jupyter
+ - mamba
+ - snakemake
+ - bcftools
+ - bedtools
+ - samtools
+ - bioconductor-genomicranges
+ - r-essentials
+ - r-base
+ - r-docopt
+ - r-devtools
+ - r-tidyr
+ - r-gridextra
+ - r-cowplot
+ - r-viridis
+ - r-igraph

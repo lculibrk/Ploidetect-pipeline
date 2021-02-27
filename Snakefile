@@ -145,7 +145,7 @@ rule mergedbed:
         gc=rules.getgc.output,
         tumour=rules.mergesomatic.output,
         normal=rules.merge_germline.output,
-		loh=rules.process_loh.output
+	    loh=rules.process_loh.output
     output:
         temp("{temp_dir}/merged.bed")
     conda:
@@ -166,16 +166,18 @@ rule preseg:
 rule ploidetect:
     input:
         rules.preseg.output,
-	rules.install_ploidetect.output
+	    rules.install_ploidetect.output
     output:
-        "{output_dir}/plots.pdf",
-        "{output_dir}/models.txt",
-        "{output_dir}/meta.RDS"
+        plots="{output_dir}/plots.pdf",
+        models="{output_dir}/models.txt",
+        meta="{output_dir}/meta.RDS"
     conda:
         "conda_configs/r.yaml"
     resources: cpus=24, mem_mb=189600
     shell:
-        "Rscript scripts/run_ploidetect2.R -i {input[0]} -o {output[1]} -p {output[0]} -r {output[2]}"
+        "Rscript scripts/run_ploidetect2.R "
+        " -i {input[0]} "
+        " -o {output.models} -p {output.plots} -r {output.meta}"
 
 rule ploidetect_copynumber:
     input:
