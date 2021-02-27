@@ -122,19 +122,33 @@ rule mergedbed:
     shell:
                 "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
 
-rule install_pdt:
+
+def devtools_install():
+    if config["ploidetect_local_clone"]:
+        devtools_cmd = "\"devtools::install_local('" + config["ploidetect_local_clone"] + "')\""
+    else:
+        devtools_cmd = "\"devtools::install_github('lculibrk/Ploidetect', "
+        devtools_cmd += "ref = '" + config["ploidetect_github_version"] + "')\""
+    return devtools_cmd
+
+rule install_ploidetect:
     output:
-        "pdt_installed.txt"
+        "conda_configs/ploidetect_installed.txt"
     conda:
         "conda_configs/r.yaml"
+    params:
+        devtools_install()
     shell:
-        "R REMOTES_NO_ERRORS_FROM_WARNINGS=\"true\"; Rscript -e \"devtools::install_github('lculibrk/Ploidetect')\"; touch {output}"
+        "export LC_ALL=en_US.UTF-8; "
+        " Rscript -e {params} "
+        " && echo {params} > {output} && date >> {output}"
+
 
 rule preseg:
     input:
         expand("{temp_dir}/merged.bed", temp_dir=temp_dir)
     output:
-        temp(expand("{temp_dir}/segmented.RDS", temp_dir=temp_dir))
+        "{output_dir}/segmented.RDS"
     conda:
         "conda_configs/r.yaml"
     shell:
@@ -143,7 +157,7 @@ rule preseg:
 rule ploidetect:
     input:
         rules.preseg.output,
-	rules.install_pdt.output
+	rules.install_ploidetect.output
     output:
         "{output_dir}/plots.pdf",
         "{output_dir}/models.txt",
@@ -157,7 +171,7 @@ rule ploidetect:
 rule ploidetect_copynumber:
     input:
         "{output_dir}/models.txt",
-        expand("{temp_dir}/segmented.RDS", temp_dir=temp_dir),
+        "{output_dir}/segmented.RDS",
         "{output_dir}/plots.pdf"
     output:
         "{output_dir}/cna.txt",
