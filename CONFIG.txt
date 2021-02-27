@@ -6,6 +6,11 @@ bams:
 output_dir: "ploidetect"
 temp_dir:
 
+# Leave ploidetect_local_clone blank to download from github
+ploidetect_local_clone: /gsc/pipelines/Ploidetect/v1.0.0
+# ploidetect_github_version should be a branch or tag.
+ploidetect_github_version: master
+
 genome_name: "hg19"
 genome: /projects/lculibrk_prj/CNV/Ploidetect/file_dependencies/hg19.fa
 array_positions: "resources/snp_arrays/hg19/SNP_array_positions.txt"
