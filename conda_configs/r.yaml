@@ -1,7 +1,9 @@
 channels:
  - r
+ - conda-forge
 dependencies:
  - r-essentials
  - r-docopt
  - r-data.table
  - r-devtools
+ - r-ggrastr
