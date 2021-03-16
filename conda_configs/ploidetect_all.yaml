@@ -14,6 +14,7 @@ dependencies:
  - r-base
  - r-docopt
  - r-devtools
+ - r-ggrastr
  - r-tidyr
  - r-gridextra
  - r-cowplot
