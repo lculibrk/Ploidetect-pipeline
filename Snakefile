@@ -4,8 +4,9 @@ configfile: "./CONFIG.txt"
 
 chromosomes=config["chromosomes"]
 output_dir = config["output_dir"]
-temp_dir = config["temp_dir"] if config["temp_dir"] else output_dir + "/temp"
+temp_dir = config["temp_dir"] if config["temp_dir"] else f"{output_dir}/temp"
 
+scripts_dir = os.path.join(workflow.basedir, "scripts")
 
 rule all:
     input:
@@ -21,6 +22,7 @@ def devtools_install():
     return devtools_cmd
 
 rule install_ploidetect:
+    """Install Ploidetect R script into environment"""
     output:
         "conda_configs/ploidetect_installed.txt"
     conda:
@@ -35,15 +37,15 @@ rule install_ploidetect:
 
 rule germline_cov:
     input:
-        config["bams"]["normal"]
+        bam=config["bams"]["normal"],
     output:
         temp("{temp_dir}/normal/{chr}.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
     shell:
-        "samtools depth -r{wildcards.chr} -Q 21 {input}"
+        "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
-        " | python3 scripts/make_windows.py - 100000"
+        " | python3 {scripts_dir}/make_windows.py - 100000"
         " | bedtools sort -i stdin > {output}"
 
 rule merge_germline:
