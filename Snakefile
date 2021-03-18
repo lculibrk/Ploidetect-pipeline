@@ -25,7 +25,7 @@ def devtools_install():
 rule install_ploidetect:
     """Install Ploidetect R script into environment"""
     output:
-        "conda_configs/ploidetect_installed.txt"
+        expand("{install_dir}/conda_configs/ploidetect_installed.txt", install_dir=workflow.basedir)
     conda:
         "conda_configs/r.yaml"
     params:
