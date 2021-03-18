@@ -1,6 +1,6 @@
 ' merge_loh.R
 
-Usage: 
+Usage:
 merge_cha.R -l loh -w windows -o output
 
 Options:
@@ -12,7 +12,27 @@ Options:
 library(docopt)
 library(dplyr)
 library(GenomicRanges)
-source("scripts/merge_mafs.R")
+
+# Use script-relative import replacement for
+#   source("scripts/merge_mafs.R")
+
+# Find local script - method 1
+library(tidyverse)
+get_this_file <- function(){
+    commandArgs() %>%
+       tibble::enframe(name=NULL) %>%
+       tidyr::separate(col=value, into=c("key", "value"), sep="=", fill='right') %>%
+       dplyr::filter(key == "--file") %>%
+       dplyr::pull(value)
+}
+this_file <- get_this_file()
+source(paste(dirname(this_file), "merge_mafs.R", sep="/"))
+
+# Find local script - method 2
+# Require install of new library funr
+# this_folder <- funr::get_script_path()
+# source(paste(this_folder, "merge_mafs.R", sep="/"))
+
 args <- docopt(doc)
 print(args)
 if(args$loh == "STDIN"){
