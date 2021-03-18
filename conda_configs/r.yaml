@@ -5,3 +5,4 @@ dependencies:
  - r-docopt
  - r-data.table
  - r-devtools
+ - r-funr

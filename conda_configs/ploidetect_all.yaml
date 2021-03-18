@@ -20,3 +20,4 @@ dependencies:
  - r-cowplot
  - r-viridis
  - r-igraph
+ - r-funr
