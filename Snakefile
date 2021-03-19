@@ -4,8 +4,10 @@ configfile: "./CONFIG.txt"
 
 chromosomes=config["chromosomes"]
 output_dir = config["output_dir"]
-temp_dir = config["temp_dir"] if config["temp_dir"] else output_dir + "/temp"
+temp_dir = config["temp_dir"] if config["temp_dir"] else f"{output_dir}/temp"
 
+scripts_dir = os.path.join(workflow.basedir, "scripts")
+array_positions = config["array_positions"][config["genome_name"]] if os.path.exists(config["array_positions"][config["genome_name"]]) else os.path.join(workflow.basedir, config["array_positions"][config["genome_name"]])
 
 rule all:
     input:
@@ -21,8 +23,9 @@ def devtools_install():
     return devtools_cmd
 
 rule install_ploidetect:
+    """Install Ploidetect R script into environment"""
     output:
-        "conda_configs/ploidetect_installed.txt"
+        expand("{install_dir}/conda_configs/ploidetect_installed.txt", install_dir=workflow.basedir)
     conda:
         "conda_configs/r.yaml"
     params:
@@ -35,15 +38,15 @@ rule install_ploidetect:
 
 rule germline_cov:
     input:
-        config["bams"]["normal"]
+        bam=config["bams"]["normal"],
     output:
         temp("{temp_dir}/normal/{chr}.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
     shell:
-        "samtools depth -r{wildcards.chr} -Q 21 {input}"
+        "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
-        " | python3 scripts/make_windows.py - 100000"
+        " | python3 {scripts_dir}/make_windows.py - 100000"
         " | bedtools sort -i stdin > {output}"
 
 rule merge_germline:
@@ -107,11 +110,11 @@ rule compute_loh:
         temp("{temp_dir}/loh_tmp/loh_raw.txt")
     params:
         genome = config["genome"][config["genome_name"]],
-        array_positions = config["array_positions"][config["genome_name"]]
+	array_positions = {array_positions}
     conda:
         "conda_configs/sequence_processing.yaml"
     shell:
-        "bash scripts/get_allele_freqs.bash {input.normbam} {input.sombam}"
+        "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions} {temp_dir}/loh_tmp/"
 
 rule process_loh:
@@ -126,7 +129,7 @@ rule process_loh:
         "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
         " | bedtools sort -i stdin"
-        " | Rscript scripts/merge_loh.R -l STDIN -w {input.window} -o {output}"
+        " | Rscript {scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
 
 rule getgc:
     input:
@@ -161,7 +164,7 @@ rule preseg:
     conda:
         "conda_configs/r.yaml"
     shell:
-        "Rscript scripts/prep_ploidetect2.R -i {input} -o {output}"
+        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
 
 rule ploidetect:
     input:
@@ -175,7 +178,7 @@ rule ploidetect:
         "conda_configs/r.yaml"
     resources: cpus=24, mem_mb=189600
     shell:
-        "Rscript scripts/run_ploidetect2.R "
+        "Rscript {scripts_dir}/run_ploidetect2.R "
         " -i {input[0]} "
         " -o {output.models} -p {output.plots} -r {output.meta}"
 
@@ -193,4 +196,4 @@ rule ploidetect_copynumber:
         "{output_dir}/cna_log.txt"
     resources: cpus=24, mem_mb=189600
     shell:
-        "Rscript scripts/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
+        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
