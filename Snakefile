@@ -37,6 +37,7 @@ rule install_ploidetect:
 
 
 rule germline_cov:
+    """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins"""
     input:
         bam=config["bams"]["normal"],
     output:
@@ -50,6 +51,7 @@ rule germline_cov:
         " | bedtools sort -i stdin > {output}"
 
 rule merge_germline:
+    """Merge multi-chromosome output from germline_cov into single file"""
     input:
         expand("{temp_dir}/normal/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
     output:
@@ -60,6 +62,7 @@ rule merge_germline:
         "cat {input} | bedtools sort -i stdin > {output}"
 
 rule makewindowfile:
+    """Remove germline depth column from file to obtain bins"""
     input:
         rules.merge_germline.output
     output:
@@ -70,6 +73,7 @@ rule makewindowfile:
         "cut -f 1,2,3 < {input} | bedtools sort -i stdin > {output}"
 
 rule splitwindowfile:
+    """Split bins into each chromosome for parallel computing of depth in somatic"""
     input:
         rules.makewindowfile.output
     output:
@@ -80,6 +84,7 @@ rule splitwindowfile:
         "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
 
 rule genomecovsomatic:
+    """Compute depth of tumor and normal reads in previously created bins"""
     input:
         sombam=config["bams"]["somatic"],
         nombam=config["bams"]["normal"],
@@ -92,6 +97,7 @@ rule genomecovsomatic:
         "bedtools multicov -bams {input.sombam} {input.nombam} -q 20 -bed {input.window}  > {output}"
 
 rule mergesomatic:
+    """Merge output of genomecovsomatic to a singular file"""
     input:
         expand("{temp_dir}/tumour/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
     output:
@@ -103,6 +109,7 @@ rule mergesomatic:
 
 
 rule compute_loh:
+    """Variant call the germline, filter for heterozygous snps and count alleles in somatic"""
     input:
         normbam = config["bams"]["normal"],
         sombam = config["bams"]["somatic"]
@@ -118,6 +125,7 @@ rule compute_loh:
         " {params.genome} {params.array_positions} {temp_dir}/loh_tmp/"
 
 rule process_loh:
+    """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
         loh=rules.compute_loh.output,
         window=rules.makewindowfile.output
@@ -132,6 +140,7 @@ rule process_loh:
         " | Rscript {scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
 
 rule getgc:
+    """Get GC content for each bin"""
     input:
         window=rules.makewindowfile.output
     output:
@@ -144,6 +153,7 @@ rule getgc:
         "bedtools nuc -fi {params.genome} -bed {input} | cut -f1,2,3,5 | tail -n +2 > {output}"
 
 rule mergedbed:
+    """Merge all the data into a single file"""
     input:
         gc=rules.getgc.output,
         tumour=rules.mergesomatic.output,
@@ -157,6 +167,7 @@ rule mergedbed:
         "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
 
 rule preseg:
+    """Presegment and prepare data for input into Ploidetect"""
     input:
         expand("{temp_dir}/merged.bed", temp_dir=temp_dir)
     output:
@@ -167,6 +178,7 @@ rule preseg:
         "Rscript {scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
 
 rule ploidetect:
+    """Runs Ploidetect"""
     input:
         rules.preseg.output,
 	    rules.install_ploidetect.output
@@ -183,6 +195,7 @@ rule ploidetect:
         " -o {output.models} -p {output.plots} -r {output.meta}"
 
 rule ploidetect_copynumber:
+    """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
     input:
         "{output_dir}/models.txt",
         "{output_dir}/segmented.RDS",
