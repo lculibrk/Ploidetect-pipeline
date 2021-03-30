@@ -13,8 +13,11 @@ rule all:
     input:
         expand("{output_dir}/cna.txt", output_dir=output_dir)
 
-## Function that checks if the docker: booleaon in config is true, and if so, don't require pdt_installed.txt
 def check_docker():
+    """Ploidetect installed filepath.
+    Filename to create on a successful install or check for successful installation. 
+    Checks the config file for docker options.
+    """
     if config["use-docker"] == 1:
     # /dev/null should be present in basically every 'nix system
     # This ensures that install_ploidetect isn't run
