@@ -36,6 +36,7 @@ rule install_ploidetect:
     """Install Ploidetect R script into environment"""
     output:
         expand("{install_dir}/conda_configs/ploidetect_installed.txt", install_dir=workflow.basedir)
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/r.yaml"
     params:
@@ -52,6 +53,7 @@ rule germline_cov:
         bam=config["bams"]["normal"],
     output:
         temp("{temp_dir}/normal/{chr}.bed")
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -68,6 +70,7 @@ rule merge_germline:
         expand("{temp_dir}/normal/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
     output:
         temp("{temp_dir}/germline.bed")
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -81,6 +84,7 @@ rule makewindowfile:
         rules.merge_germline.output
     output:
         temp("{temp_dir}/windows.txt")
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -94,6 +98,7 @@ rule splitwindowfile:
         rules.makewindowfile.output
     output:
         temp("{temp_dir}/windows/{chr}.txt")
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -109,6 +114,7 @@ rule genomecovsomatic:
         window=rules.splitwindowfile.output
     output:
         temp("{temp_dir}/tumour/{chr}.bed")
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -122,6 +128,7 @@ rule mergesomatic:
         expand("{temp_dir}/tumour/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
     output:
         temp("{temp_dir}/tumour.bed")
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -139,7 +146,8 @@ rule compute_loh:
         temp("{temp_dir}/loh_tmp/loh_raw.txt")
     params:
         genome = config["genome"][config["genome_name"]],
-	array_positions = {array_positions}
+	    array_positions = {array_positions}
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -155,6 +163,7 @@ rule process_loh:
         window=rules.makewindowfile.output
     output:
         temp("{temp_dir}/loh.bed")
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -173,6 +182,7 @@ rule getgc:
         temp("{temp_dir}/gc.bed")
     params:
         genome=config["genome"][config["genome_name"]]
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -189,6 +199,7 @@ rule mergedbed:
 	    loh=rules.process_loh.output
     output:
         temp("{temp_dir}/merged.bed")
+    resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -202,6 +213,7 @@ rule preseg:
         expand("{temp_dir}/merged.bed", temp_dir=temp_dir)
     output:
         "{output_dir}/segmented.RDS"
+    resources: cpus=24, mem_mb=189600
     conda:
         "conda_configs/r.yaml"
     container:
