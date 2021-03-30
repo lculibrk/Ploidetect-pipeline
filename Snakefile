@@ -2,6 +2,9 @@ import glob
 import os
 configfile: "./CONFIG.txt"
 
+__version__ = "0.0.1"
+print(f"Ploidetect-pipeline {__version__}")
+
 chromosomes=config["chromosomes"]
 output_dir = config["output_dir"]
 temp_dir = config["temp_dir"] if config["temp_dir"] else f"{output_dir}/temp"
