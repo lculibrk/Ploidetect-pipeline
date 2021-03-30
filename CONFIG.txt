@@ -10,6 +10,9 @@ temp_dir:
 ploidetect_local_clone: /gsc/pipelines/Ploidetect/v1.0.0
 # ploidetect_github_version should be a branch or tag.
 ploidetect_github_version: master
+# are we using docker?
+use-docker: 1
+
 
 genome_name:
     "hg19"
