@@ -52,9 +52,10 @@ Now either install for the `--use-conda` or `--use-singularity`/docker options
 snakemake --use-conda --conda-frontend mamba --conda-create-envs-only -j 1
 ```
 
-##### singularity/docker
+##### singularity/docker with slurm cluster submission
 
 ```
+mkdir  logs_slurm data output
 snakemake \
  --use-singularity \
  --singularity-args "-B /path/to/bams,data/,output/" \
