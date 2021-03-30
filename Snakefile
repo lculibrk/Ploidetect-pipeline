@@ -13,6 +13,16 @@ rule all:
     input:
         expand("{output_dir}/cna.txt", output_dir=output_dir)
 
+## Function that checks if the docker: booleaon in config is true, and if so, don't require pdt_installed.txt
+def check_docker():
+    if config["use-docker"] == 1:
+    # /dev/null should be present in basically every 'nix system
+    # This ensures that install_ploidetect isn't run
+        file_to_make = "/dev/null"
+    else:
+    # if not using docker, should install Ploidetect
+        file_to_make = os.path.join(workflow.basedir, "conda_configs/ploidetect_installed.txt")
+    return(file_to_make)
 
 def devtools_install():
     if config["ploidetect_local_clone"]:
@@ -20,7 +30,7 @@ def devtools_install():
     else:
         devtools_cmd = "\"devtools::install_github('lculibrk/Ploidetect', "
         devtools_cmd += "ref = '" + config["ploidetect_github_version"] + "')\""
-    return devtools_cmd
+    return(devtools_cmd)
 
 rule install_ploidetect:
     """Install Ploidetect R script into environment"""
@@ -44,6 +54,8 @@ rule germline_cov:
         temp("{temp_dir}/normal/{chr}.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
@@ -58,6 +70,8 @@ rule merge_germline:
         temp("{temp_dir}/germline.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
 
@@ -69,6 +83,8 @@ rule makewindowfile:
         temp("{temp_dir}/windows.txt")
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "cut -f 1,2,3 < {input} | bedtools sort -i stdin > {output}"
 
@@ -80,6 +96,8 @@ rule splitwindowfile:
         temp("{temp_dir}/windows/{chr}.txt")
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
 
@@ -93,6 +111,8 @@ rule genomecovsomatic:
         temp("{temp_dir}/tumour/{chr}.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "bedtools multicov -bams {input.sombam} {input.nombam} -q 20 -bed {input.window}  > {output}"
 
@@ -104,6 +124,8 @@ rule mergesomatic:
         temp("{temp_dir}/tumour.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
 
@@ -120,6 +142,8 @@ rule compute_loh:
 	array_positions = {array_positions}
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions} {temp_dir}/loh_tmp/"
@@ -133,6 +157,8 @@ rule process_loh:
         temp("{temp_dir}/loh.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
@@ -149,6 +175,8 @@ rule getgc:
         genome=config["genome"][config["genome_name"]]
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "bedtools nuc -fi {params.genome} -bed {input} | cut -f1,2,3,5 | tail -n +2 > {output}"
 
@@ -163,6 +191,8 @@ rule mergedbed:
         temp("{temp_dir}/merged.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
 
@@ -174,6 +204,8 @@ rule preseg:
         "{output_dir}/segmented.RDS"
     conda:
         "conda_configs/r.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "Rscript {scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
 
@@ -181,7 +213,7 @@ rule ploidetect:
     """Runs Ploidetect"""
     input:
         rules.preseg.output,
-	    rules.install_ploidetect.output
+	    check_docker()
     output:
         plots="{output_dir}/plots.pdf",
         models="{output_dir}/models.txt",
@@ -189,6 +221,8 @@ rule ploidetect:
     conda:
         "conda_configs/r.yaml"
     resources: cpus=24, mem_mb=189600
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "Rscript {scripts_dir}/run_ploidetect2.R "
         " -i {input[0]} "
