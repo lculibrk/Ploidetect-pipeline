@@ -11,6 +11,7 @@ from os.path import abspath, dirname, exists, join, realpath
 from ProjectInfo import BioappsApi
 from ruamel_yaml import YAML
 
+__version__ = "0.0.1"
 API = BioappsApi()
 GENOME_DATA = """\
 # Reference data.  Selected by 'genome_name' value.
@@ -161,7 +162,7 @@ def get_bam(library, genome_reference=None):
         bams_all = [bd for bd in bams_all if bd["genome_reference"] == genome_reference]
     bams = []
     for bam in bams_all:
-        bam_fns = glob.glob(join(bam['data_path'], "*.bam"))
+        bam_fns = glob.glob(join(bam["data_path"], "*.bam"))
         if not bam_fns:  # GERO-114 - COLO829 - no bam in path
             logging.error(f"No bam found in path: {bam['data_path']}")
         else:
@@ -170,7 +171,7 @@ def get_bam(library, genome_reference=None):
         warn = f"Ignoring tumour bam {bam['data_path']}"
         logging.warning(warn)
 
-    bam_fns = glob.glob(join(bams[0]['data_path'], "*.bam"))
+    bam_fns = glob.glob(join(bams[0]["data_path"], "*.bam"))
     assert len(bam_fns) == 1, f"Bam finding error for: '{library}'"
     return (bam_fns[0], bams[0]["genome_reference"])
 
@@ -283,10 +284,16 @@ def build_config(
     )
 
     # Ploidetect installation and versions.
-    yaml_lines.append("# ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone.")
+    yaml_lines.append(
+        "# ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone."
+    )
     yaml_lines.append(f"ploidetect_github_version: {ploidetect_ver}")
-    yaml_lines.append("# Leave ploidetect_local_clone blank or 'None' to download from github")
-    yaml_lines.append(f"ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}")
+    yaml_lines.append(
+        "# Leave ploidetect_local_clone blank or 'None' to download from github"
+    )
+    yaml_lines.append(
+        f"ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}"
+    )
     yaml_lines.append(f"use-docker: {1 if bool(use_docker) else 0}")
 
     # Genomic Reference data
@@ -331,6 +338,12 @@ def parse_args():
     )
 
     parser.add_argument("-d", "--use-docker", help="Set use docker/slurm tag")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=__version__,
+        help="Show version and exit.",
+    )
 
     args = parser.parse_args()
     if (args.tumour_lib or args.normal_lib) and args.biopsy:
