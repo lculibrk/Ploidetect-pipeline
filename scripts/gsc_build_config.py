@@ -58,7 +58,7 @@ def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
         >>> get_biopsy_dna_tumour_normal("POG965", biopsy="biop2")
         ('P02866', 'P02590')
     """
-    libs = API.get_lib_names("POG965")
+    libs = API.get_lib_names(patient_id)
     normals = [
         lib for lib in libs if API.is_normal_library(lib) and API.is_dna_library(lib)
     ]
@@ -263,14 +263,6 @@ def build_config(
 
     # Find bams
     yaml_lines.append("bams:")
-
-    tumour_bams = API.get_bam_info_from_library(tumour_lib)
-    for bam in tumour_bams[1:]:
-        warn = f"Ignoring tumour bam {bam['data_path']}"
-        logging.warning(warn)
-        yaml_lines.append(f"{TAB}# {warn}")
-    tumour_bam_fns = glob.glob(join(tumour_bams[0]['data_path'], "*.bam"))
-    assert len(tumour_bam_fns) == 1, f"Bam finding error for: '{tumour_bams[0]['data_path']}'"
 
     tumour_bam_fn, genome_name = get_bam(tumour_lib)
     yaml_lines.append(f"{TAB}somatic: {tumour_bam_fn}")
