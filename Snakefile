@@ -1,8 +1,8 @@
 import glob
 import os
-configfile: "./CONFIG.txt"
+configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"  # allows --configfile to be specified
 print(f"Ploidetect-pipeline {__version__}")
 
 chromosomes=config["chromosomes"]
