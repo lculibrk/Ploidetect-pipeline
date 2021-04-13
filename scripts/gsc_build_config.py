@@ -140,13 +140,14 @@ def get_gsc_output_folder(
 
     Example:
         >>> get_gsc_output_folder("POG965", "P02866", "P02590", "0.0.1", "v1.0.0")
-        '/projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect-pipeline-0.0.1/Ploidetect-v1.0.0'
+        '/projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect/Ploidetect-pipeline-0.0.1/Ploidetect-v1.0.0'
     """
     somatic_pair_folder = get_somatic_folder(
         patient_id, tumour_lib, normal_lib, project=project
     )
     return join(
         somatic_pair_folder,
+        "Ploidetect",
         "Ploidetect-pipeline-" + pipeline_ver,
         "Ploidetect-" + ploidetect_ver,
     )
@@ -206,7 +207,7 @@ def build_config(
           somatic: /projects/analysis/analysis30/P02866/merge32550_bwa-mem-0.7.6a-sb/150bp/hg19a/P02866_3_lanes_dupsFlagged.bam
           normal: /projects/analysis/analysis30/P02590/HCW32CCXY_8/P02590/150nt/hg19a/bwa-mem-0.7.6a-sb/P02590_1_lane_dupsFlagged.bam
         genome_name: hg19
-        output_dir: /projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect-pipeline-undefined/Ploidetect-undefined
+        output_dir: /projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect/Ploidetect-pipeline-undefined/Ploidetect-undefined
         temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590
         # ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone.
         ploidetect_github_version: undefined
