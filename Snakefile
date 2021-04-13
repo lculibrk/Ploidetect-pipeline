@@ -1,13 +1,11 @@
 import glob
 import os
+
+# Use --configfile to specify - test default shown below
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
-<<<<<<< HEAD
-__version__ = "v0.0.2"  # allows --configfile to be specified
-=======
 ## Versioning
-__version__ = "0.0.1"
->>>>>>> Added support for multiple samples per config file
+__version__ = "v0.0.3"  # merge - GSC and multi-sample
 print(f"Ploidetect-pipeline {__version__}")
 
 ## Load config values
