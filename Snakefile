@@ -2,7 +2,8 @@ import glob
 import os
 
 # Use --configfile to specify - test default shown below
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+if not config:
+    configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
 ## Versioning
 __version__ = "v0.0.3"  # merge - GSC and multi-sample
@@ -12,6 +13,8 @@ print(f"Ploidetect-pipeline {__version__}")
 chromosomes=config["chromosomes"]
 output_dir = config["output_dir"]
 temp_dir = config["temp_dir"] if config["temp_dir"] else f"{output_dir}/temp/"
+if temp_dir[-1] != "/":
+    temp_dir += "/"  # Prevents strange case wild-card error.
 
 ## Parse sample information
 bams_dict = config['bams']
