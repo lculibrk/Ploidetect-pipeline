@@ -1,0 +1,10 @@
+dependencies:
+ - python=3.8
+ - conda
+ - mamba
+ - snakemake
+ - ruamel
+ - pip
+ - pip:
+   - "ProjectInfo"
+   - "--index-url https://pypi.bcgsc.ca/gsc/packages"

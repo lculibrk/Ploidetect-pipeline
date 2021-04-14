@@ -1,8 +1,8 @@
 import glob
 import os
-configfile: "./CONFIG.txt"
+configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"  # allows --configfile to be specified
 print(f"Ploidetect-pipeline {__version__}")
 
 chromosomes=config["chromosomes"]
@@ -18,7 +18,7 @@ rule all:
 
 def check_docker():
     """Ploidetect installed filepath.
-    Filename to create on a successful install or check for successful installation. 
+    Filename to create on a successful install or check for successful installation.
     Checks the config file for docker options.
     """
     if config["use-docker"] == 1:
@@ -31,8 +31,9 @@ def check_docker():
     return(file_to_make)
 
 def devtools_install():
-    if config["ploidetect_local_clone"]:
-        devtools_cmd = "\"devtools::install_local('" + config["ploidetect_local_clone"] + "')\""
+    if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
+        install_path = config["ploidetect_local_clone"].format(**config)
+        devtools_cmd = "\"devtools::install_local('" + install_path + "')\""
     else:
         devtools_cmd = "\"devtools::install_github('lculibrk/Ploidetect', "
         devtools_cmd += "ref = '" + config["ploidetect_github_version"] + "')\""
