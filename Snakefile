@@ -1,13 +1,13 @@
 import glob
 import os
 
-# Use --configfile to specify - test default shown below
-if not config:
-    configfile: os.path.join(workflow.basedir, "CONFIG.txt")
-
 ## Versioning
 __version__ = "v0.0.3"  # merge - GSC and multi-sample
 print(f"Ploidetect-pipeline {__version__}")
+
+# Use --configfile to specify - test default shown below
+if "chromosomes" not in config.keys():
+    configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
 ## Load config values
 chromosomes=config["chromosomes"]
