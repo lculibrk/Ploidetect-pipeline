@@ -61,3 +61,14 @@ snakemake \
  --singularity-args "-B /path/to/bams,data/,output/" \
  --cluster 'sbatch -t 2-00:00:00 --mem={resources.mem_mb} -c {resources.cpus} -o logs_slurm/{rule}_{wildcards} -e logs_slurm/{rule}_{wildcards} -p QUEUE'
 ```
+
+## GSC config builder
+
+Use GSC bioapps details to autobuild a config for use with the standard Snakefile.
+Requires GSC bioapps access permissions.
+
+Eg. Find libraries & paths for POG965.
+
+```
+snakemake -s Snakefile.gsc.smk -pr --config id=POG965 biopsy=biop2
+```
