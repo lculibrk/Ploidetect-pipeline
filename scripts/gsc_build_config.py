@@ -13,6 +13,7 @@ from ruamel_yaml import YAML
 
 __version__ = "0.0.1"
 API = BioappsApi()
+CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
 GENOME_DATA = """\
 # Reference data.  Selected by 'genome_name' value.
 genome:
@@ -330,7 +331,7 @@ def parse_args():
         "-o",
         "--output-file",
         help="specify a config filename.",
-        default="DERIVED_OUTPUT_DIR/Ploidetect-pipeline.cfg",
+        default=f"DERIVED_OUTPUT_DIR/{CONFIG_BASENAME}",
     )
     parser.add_argument(
         "-p",
