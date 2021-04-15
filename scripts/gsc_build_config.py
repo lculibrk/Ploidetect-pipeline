@@ -191,6 +191,7 @@ def build_config(
     ploidetect_ver="undefined",
     use_docker=False,
     project=None,
+    **kwargs,
 ):
     """Build a GSC config for running Ploidetect.
 
@@ -365,16 +366,8 @@ def main(args=None):
 
     if args.output_file and exists(args.output_file):
         raise ValueError(f"Output config already exists: '{args.output_file}'")
-    config = build_config(
-        patient_id=args.patient_id,
-        biopsy=args.biopsy,
-        tumour_lib=args.tumour_lib,
-        normal_lib=args.normal_lib,
-        pipeline_ver=args.pipeline_ver,
-        ploidetect_ver=args.ploidetect_ver,
-        use_docker=args.use_docker,
-        project=args.project,
-    )
+
+    config = build_config(**vars(args))
 
     if not args.output_file:
         YAML().dump(config, sys.stdout)
