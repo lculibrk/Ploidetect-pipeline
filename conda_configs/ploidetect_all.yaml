@@ -20,3 +20,8 @@ dependencies:
  - r-cowplot
  - r-viridis
  - r-igraph
+ - ruamel
+ - pip
+ - pip:
+   - "ProjectInfo"
+   - "--index-url https://pypi.bcgsc.ca/gsc/packages"
