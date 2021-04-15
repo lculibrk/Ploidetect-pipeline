@@ -1,13 +1,17 @@
 import glob
 import os
+import sys
+
+sys.path.insert(0, workflow.basedir)
+from constants import VERSION
+print(f"Ploidetect-pipeline {VERSION}")
+
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
-__version__ = "v0.0.2"  # allows --configfile to be specified
-print(f"Ploidetect-pipeline {__version__}")
-
-chromosomes=config["chromosomes"]
 output_dir = config["output_dir"]
-temp_dir = config["temp_dir"] if config["temp_dir"] else f"{output_dir}/temp"
+if "temp_dir" not in config or not config["temp_dir"]:
+    config["temp_dir"] = f"{output_dir}/temp"
+temp_dir = config["temp_dir"]
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")
 array_positions = config["array_positions"][config["genome_name"]] if os.path.exists(config["array_positions"][config["genome_name"]]) else os.path.join(workflow.basedir, config["array_positions"][config["genome_name"]])
@@ -74,7 +78,7 @@ rule germline_cov:
 rule merge_germline:
     """Merge multi-chromosome output from germline_cov into single file"""
     input:
-        expand("{temp_dir}/normal/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
+        expand("{temp_dir}/normal/{chr}.bed", chr=config["chromosomes"], temp_dir=temp_dir)
     output:
         temp("{temp_dir}/germline.bed")
     resources: cpus=1, mem_mb=7900
@@ -132,7 +136,7 @@ rule genomecovsomatic:
 rule mergesomatic:
     """Merge output of genomecovsomatic to a singular file"""
     input:
-        expand("{temp_dir}/tumour/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
+        expand("{temp_dir}/tumour/{chr}.bed", chr=config["chromosomes"], temp_dir=temp_dir)
     output:
         temp("{temp_dir}/tumour.bed")
     resources: cpus=1, mem_mb=7900
@@ -153,7 +157,8 @@ rule compute_loh:
         temp("{temp_dir}/loh_tmp/loh_raw.txt")
     params:
         genome = config["genome"][config["genome_name"]],
-	    array_positions = {array_positions}
+        array_positions = {array_positions},
+        temp_dir = temp_dir
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -161,7 +166,7 @@ rule compute_loh:
         "docker://lculibrk/ploidetect"
     shell:
         "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
-        " {params.genome} {params.array_positions} {temp_dir}/loh_tmp/"
+        " {params.genome} {params.array_positions} {params.temp_dir}/loh_tmp/"
 
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
