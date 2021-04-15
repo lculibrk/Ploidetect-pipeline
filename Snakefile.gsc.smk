@@ -24,7 +24,7 @@ else:
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")
 sys.path.append(scripts_dir)
-from gsc_build_config import CONFIG_BASENAME, get_biopsy_dna_tumour_normal, get_gsc_output_folder
+from gsc_build_config import get_biopsy_dna_tumour_normal, get_gsc_output_folder, get_ploidetect_temp_folder
 
 if "biopsy" in config.keys():
     tumour_lib, normal_lib = get_biopsy_dna_tumour_normal(patient_id=config["id"], biopsy=config["biopsy"])
@@ -33,29 +33,30 @@ if "tumour_lib" in config.keys():
 if "normal_lib" in config.keys():
     normal_lib = config["normal_lib"]
 
-# Find an output filename for the config we are generating
-if "create_config" in config.keys():
-    output_filename = config["create_config"]
-else:
-    output_filename = get_gsc_output_folder(
-        patient_id=config["id"],
-        tumour_lib=tumour_lib,
-        normal_lib=normal_lib,
-        pipeline_ver=pipeline_ver,
-        ploidetect_ver=ploidetect_ver,
-        project=config["project"] if "project" in config.keys() else None,
-    )
-    output_filename = os.path.join(output_filename, CONFIG_BASENAME)
 
-print(f"config: {output_filename}")
 
-rule gsc_config:
-    params:
-        ver=f'--pipeline-ver {pipeline_ver} --ploidetect-ver {ploidetect_ver}',
-        id=config["id"],
-        libs=f'-b {config["biopsy"]}' if "biopsy" in config.keys() else f'-t {config["tumour_lib"]} -n {config["normal_lib"]}',
-        project=f' --project {config["project"]}' if "project" in config.keys() else ""
+output_dir = get_gsc_output_folder(config["id"], tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=config["project"] if "project" in config.keys() else None)
+temp_dir = get_ploidetect_temp_folder(config["id"], tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=config["project"] if "project" in config.keys() else None)
+
+
+ruleorder: preseg > gsc_preseg
+
+
+rule all_gsc:
+    input:
+        expand("{output_dir}/cna.txt", output_dir=output_dir)
+
+rule gsc_preseg:
+    """Presegment and prepare data for input into Ploidetect"""
+    input:
+        expand("{temp_dir}/merged.bed", temp_dir=temp_dir)
     output:
-        output_filename
+        "{output_dir}/segmented.RDS"
+    resources: cpus=24, mem_mb=189600
+    conda:
+        "conda_configs/r.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
-        "{scripts_dir}/gsc_build_config.py {params.ver} -i {params.id} {params.libs}{params.project} -o {output_filename}"
+        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
+

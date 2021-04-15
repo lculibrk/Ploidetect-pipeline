@@ -74,7 +74,7 @@ rule germline_cov:
 rule merge_germline:
     """Merge multi-chromosome output from germline_cov into single file"""
     input:
-        expand("{temp_dir}/normal/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
+        expand("{{temp_dir}}/normal/{chr}.bed", chr=chromosomes)
     output:
         temp("{temp_dir}/germline.bed")
     resources: cpus=1, mem_mb=7900
@@ -132,7 +132,7 @@ rule genomecovsomatic:
 rule mergesomatic:
     """Merge output of genomecovsomatic to a singular file"""
     input:
-        expand("{temp_dir}/tumour/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
+        expand("{{temp_dir}}/tumour/{chr}.bed", chr=chromosomes)
     output:
         temp("{temp_dir}/tumour.bed")
     resources: cpus=1, mem_mb=7900
