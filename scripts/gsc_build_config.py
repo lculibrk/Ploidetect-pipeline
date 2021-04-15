@@ -259,22 +259,19 @@ def build_config(
 
     prog_str = f'Created by: {realpath(abspath(__file__))} at {datetime.now().strftime("%Y%m%d %H:%M:%S")}'
     yaml_lines.append(f"# {prog_str}")
-    yaml_lines.append(f"id: {patient_id}")
-    yaml_lines.append("libs:")
-    yaml_lines.append(f"{TAB}tumour: {tumour_lib}")
-    yaml_lines.append(f"{TAB}normal: {normal_lib}")
 
     # Find bams
     yaml_lines.append("bams:")
-
+    yaml_lines.append(f"{TAB}{patient_id}:")
     tumour_bam_fn, genome_name = get_bam(tumour_lib)
-    yaml_lines.append(f"{TAB}somatic: {tumour_bam_fn}")
-
     normal_bam_fn, normal_genome_name = get_bam(normal_lib)
-    yaml_lines.append(f"{TAB}normal: {normal_bam_fn}")
+
+    yaml_lines.append(f"{TAB}{TAB}somatic:")
+    yaml_lines.append(f"{TAB}{TAB}{TAB}{tumour_lib}: {tumour_bam_fn}")
+    yaml_lines.append(f"{TAB}{TAB}normal:")
+    yaml_lines.append(f"{TAB}{TAB}{TAB}{normal_lib}: {normal_bam_fn}")
 
     assert genome_name == normal_genome_name
-
     yaml_lines.append(f"genome_name: {genome_reference2genome_name(genome_name)}")
 
     # output_paths

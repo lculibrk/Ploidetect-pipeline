@@ -1,20 +1,46 @@
 import glob
 import os
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
-__version__ = "v0.0.2"  # allows --configfile to be specified
+## Versioning
+__version__ = "v0.0.3"  # merge - GSC and multi-sample
 print(f"Ploidetect-pipeline {__version__}")
 
+# Use --configfile to specify - test default shown below
+if "chromosomes" not in config.keys():
+    configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+
+## Load config values
 chromosomes=config["chromosomes"]
 output_dir = config["output_dir"]
-temp_dir = config["temp_dir"] if config["temp_dir"] else f"{output_dir}/temp"
+temp_dir = config["temp_dir"] if config["temp_dir"] else f"{output_dir}/temp/"
+if temp_dir[-1] != "/":
+    temp_dir += "/"  # Prevents strange case wild-card error.
+
+## Parse sample information
+bams_dict = config['bams']
+sample_ids = bams_dict.keys()
+
+## Here comes the for loop
+## Initialize output list, which will be fed to rule all
+output_list = []
+## Loop over the bams and construct lib comparisons
+for sample in sample_ids:
+    somatics = bams_dict[sample]["somatic"].keys()
+    normals = bams_dict[sample]["normal"].keys()
+    combinations = expand("{somatic}_{normal}", somatic = somatics, normal = normals)
+    outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
+    output_list.extend(outs)
+
+
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")
 array_positions = config["array_positions"][config["genome_name"]] if os.path.exists(config["array_positions"][config["genome_name"]]) else os.path.join(workflow.basedir, config["array_positions"][config["genome_name"]])
 
+print(output_list)
+
 rule all:
     input:
-        expand("{output_dir}/cna.txt", output_dir=output_dir)
+        output_list
 
 def check_docker():
     """Ploidetect installed filepath.
@@ -57,9 +83,9 @@ rule install_ploidetect:
 rule germline_cov:
     """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins"""
     input:
-        bam=config["bams"]["normal"],
+        bam = lambda w: config["bams"][w.case]["normal"][w.lib],
     output:
-        temp("{temp_dir}/normal/{chr}.bed")
+        temp("{temp_dir}/{case}/{lib}/normal/{chr}.bed")
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -74,9 +100,9 @@ rule germline_cov:
 rule merge_germline:
     """Merge multi-chromosome output from germline_cov into single file"""
     input:
-        expand("{temp_dir}/normal/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
+        expand("{{temp_dir}}/{{case}}/{{normal}}/normal/{chr}.bed", chr=chromosomes)
     output:
-        temp("{temp_dir}/germline.bed")
+        temp("{temp_dir}/{case}/{normal}/germline.bed")
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -90,7 +116,7 @@ rule makewindowfile:
     input:
         rules.merge_germline.output
     output:
-        temp("{temp_dir}/windows.txt")
+        temp("{temp_dir}/{case}/{normal}/windows.txt")
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -104,7 +130,7 @@ rule splitwindowfile:
     input:
         rules.makewindowfile.output
     output:
-        temp("{temp_dir}/windows/{chr}.txt")
+        temp("{temp_dir}/{case}/{normal}/windows/{chr}.txt")
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -116,11 +142,11 @@ rule splitwindowfile:
 rule genomecovsomatic:
     """Compute depth of tumor and normal reads in previously created bins"""
     input:
-        sombam=config["bams"]["somatic"],
-        nombam=config["bams"]["normal"],
+        sombam= lambda w: config["bams"][w.case]["somatic"][w.somatic],
+        nombam= lambda w: config["bams"][w.case]["normal"][w.normal],
         window=rules.splitwindowfile.output
     output:
-        temp("{temp_dir}/tumour/{chr}.bed")
+        temp("{temp_dir}/{case}/{somatic}_{normal}/tumour/{chr}.bed")
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -132,9 +158,9 @@ rule genomecovsomatic:
 rule mergesomatic:
     """Merge output of genomecovsomatic to a singular file"""
     input:
-        expand("{temp_dir}/tumour/{chr}.bed", chr=chromosomes, temp_dir=temp_dir)
+        expand("{{temp_dir}}/{{case}}/{{somatic}}_{{normal}}/tumour/{chr}.bed", chr=chromosomes)
     output:
-        temp("{temp_dir}/tumour.bed")
+        temp("{temp_dir}/{case}/{somatic}_{normal}/tumour.bed")
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -147,10 +173,10 @@ rule mergesomatic:
 rule compute_loh:
     """Variant call the germline, filter for heterozygous snps and count alleles in somatic"""
     input:
-        normbam = config["bams"]["normal"],
-        sombam = config["bams"]["somatic"]
+        sombam= lambda w: config["bams"][w.case]["somatic"][w.somatic],
+        normbam= lambda w: config["bams"][w.case]["normal"][w.normal],
     output:
-        temp("{temp_dir}/loh_tmp/loh_raw.txt")
+        temp("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt")
     params:
         genome = config["genome"][config["genome_name"]],
 	    array_positions = {array_positions}
@@ -169,7 +195,7 @@ rule process_loh:
         loh=rules.compute_loh.output,
         window=rules.makewindowfile.output
     output:
-        temp("{temp_dir}/loh.bed")
+        temp("{temp_dir}/{case}/{somatic}_{normal}/loh.bed")
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -186,7 +212,7 @@ rule getgc:
     input:
         window=rules.makewindowfile.output
     output:
-        temp("{temp_dir}/gc.bed")
+        temp("{temp_dir}/{case}/{somatic}_{normal}/gc.bed")
     params:
         genome=config["genome"][config["genome_name"]]
     resources: cpus=1, mem_mb=7900
@@ -205,7 +231,7 @@ rule mergedbed:
         normal=rules.merge_germline.output,
 	    loh=rules.process_loh.output
     output:
-        temp("{temp_dir}/merged.bed")
+        temp("{temp_dir}/{case}/{somatic}_{normal}/merged.bed")
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -217,9 +243,9 @@ rule mergedbed:
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
-        expand("{temp_dir}/merged.bed", temp_dir=temp_dir)
+        temp_dir + "{case}/{somatic}_{normal}/merged.bed"
     output:
-        "{output_dir}/segmented.RDS"
+        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS"
     resources: cpus=24, mem_mb=189600
     conda:
         "conda_configs/r.yaml"
@@ -234,9 +260,9 @@ rule ploidetect:
         rules.preseg.output,
 	    check_docker()
     output:
-        plots="{output_dir}/plots.pdf",
-        models="{output_dir}/models.txt",
-        meta="{output_dir}/meta.RDS"
+        plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
+        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
+        meta="{output_dir}/{case}/{somatic}_{normal}/meta.RDS"
     conda:
         "conda_configs/r.yaml"
     resources: cpus=24, mem_mb=189600
@@ -250,16 +276,16 @@ rule ploidetect:
 rule ploidetect_copynumber:
     """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
     input:
-        "{output_dir}/models.txt",
-        "{output_dir}/segmented.RDS",
-        "{output_dir}/plots.pdf"
+        "{output_dir}/{case}/{somatic}_{normal}/models.txt",
+        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
+        "{output_dir}/{case}/{somatic}_{normal}/plots.pdf"
     output:
-        "{output_dir}/cna.txt",
-        "{output_dir}/cna_plots.pdf"
+        "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
+        "{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf"
     conda:
         "conda_configs/r.yaml"
     log:
-        "{output_dir}/cna_log.txt"
+        "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt"
     resources: cpus=24, mem_mb=189600
     shell:
         "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
