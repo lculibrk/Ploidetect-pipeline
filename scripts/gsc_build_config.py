@@ -201,13 +201,12 @@ def build_config(
         >>> cfg = build_config("POG965", biopsy="biop2")
         >>> YAML().dump(cfg, sys.stdout)  # doctest:+ELLIPSIS +NORMALIZE_WHITESPACE
         # Created by: ...
-        id: POG965
-        libs:
-          tumour: P02866
-          normal: P02590
         bams:
-          somatic: /projects/analysis/analysis30/P02866/merge32550_bwa-mem-0.7.6a-sb/150bp/hg19a/P02866_3_lanes_dupsFlagged.bam
-          normal: /projects/analysis/analysis30/P02590/HCW32CCXY_8/P02590/150nt/hg19a/bwa-mem-0.7.6a-sb/P02590_1_lane_dupsFlagged.bam
+          POG965:
+            somatic:
+              P02866: /projects/analysis/analysis30/P02866/merge32550_bwa-mem-0.7.6a-sb/150bp/hg19a/P02866_3_lanes_dupsFlagged.bam
+            normal:
+              P02590: /projects/analysis/analysis30/P02590/HCW32CCXY_8/P02590/150nt/hg19a/bwa-mem-0.7.6a-sb/P02590_1_lane_dupsFlagged.bam
         genome_name: hg19
         output_dir: /projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect/Ploidetect-pipeline-undefined/Ploidetect-undefined
         temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590
