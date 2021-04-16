@@ -1,18 +1,21 @@
 import glob
 import os
+import sys
 
-## Versioning
-__version__ = "v0.0.3"  # merge - GSC and multi-sample
-print(f"Ploidetect-pipeline {__version__}")
+sys.path.insert(0, workflow.basedir)
+from constants import VERSION
+print(f"Ploidetect-pipeline {VERSION}")
 
-# Use --configfile to specify - test default shown below
-if "chromosomes" not in config.keys():
-    configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+
+output_dir = config["output_dir"]
 
 ## Load config values
 chromosomes=config["chromosomes"]
 output_dir = config["output_dir"]
-temp_dir = config["temp_dir"] if config["temp_dir"] else f"{output_dir}/temp/"
+if "temp_dir" not in config or not config["temp_dir"]:
+    config["temp_dir"] = f"{output_dir}/temp"
+temp_dir = config["temp_dir"]
 if temp_dir[-1] != "/":
     temp_dir += "/"  # Prevents strange case wild-card error.
 
@@ -179,7 +182,8 @@ rule compute_loh:
         temp("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt")
     params:
         genome = config["genome"][config["genome_name"]],
-	    array_positions = {array_positions}
+        array_positions = {array_positions},
+        temp_dir = temp_dir
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -187,7 +191,7 @@ rule compute_loh:
         "docker://lculibrk/ploidetect"
     shell:
         "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
-        " {params.genome} {params.array_positions} {temp_dir}/loh_tmp/"
+        " {params.genome} {params.array_positions} {params.temp_dir}/loh_tmp/"
 
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""

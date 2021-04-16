@@ -62,12 +62,11 @@ snakemake \
  --cluster 'sbatch -t 2-00:00:00 --mem={resources.mem_mb} -c {resources.cpus} -o logs_slurm/{rule}_{wildcards} -e logs_slurm/{rule}_{wildcards} -p QUEUE'
 ```
 
-## GSC config builder
+## GSC runner
 
-Use GSC bioapps details to autobuild a config for use with the standard Snakefile.
-Requires GSC bioapps access permissions.
+Use GSC bioapps details to automatically find configuration details and run the pipeline for a given ID and biop
 
-Eg. Find libraries & paths for POG965.
+Eg. run Ploidetect-pipeline for POG965 biop2.
 
 ```
 snakemake -s Snakefile.gsc.smk -pr --config id=POG965 biopsy=biop2
