@@ -1,3 +1,5 @@
+#! snakemake
+"""Run Ploidetect-pipeline with GSC sample setup helpers."""
 import os
 import sys
 from types import SimpleNamespace
@@ -9,32 +11,42 @@ from constants import VERSION as pipeline_ver
 from gsc_build_config import CONFIG_BASENAME, get_biopsy_dna_tumour_normal, get_gsc_output_folder
 from gsc_build_config import main as build_config
 
+USAGE = """\
+Run Ploidetect-pipeline with GSC sample setup helpers.
+
+Use --config options such as:
+    id: (required)
+    biopsy: eg biop2 - optional - find libraries
+    tumour_lib:
+    normal_lib:
+    gsc_config_filename: (optional) specify output config filename
+    project: (optional) specify project
+
+Examples:
+    Snakefile.gsc.smk --config id=POG965 biopsy=biop2
+
+    Snakefile.gsc.smk --config id=COLO829-TestA tumour_lib=A36971 normal_lib=A36973 project=POG
+"""
+
 # start with defaults
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
-module ploid:
-    snakefile: "Snakefile"
-    config: config
 
 ploidetect_ver = config["ploidetect_github_version"]
 
-# Check if a GSC specific config exists or must be built
-if any((gsc_key in config.keys() for gsc_key in ["biopsy", "tumour_lib", "normal_lib"])):
+if "id" in config.keys() and (
+    ("biopsy" in config.keys())
+    or ("tumour_lib" in config.keys() and "normal_lib" in config.keys())
+):
     print("Running GSC build")
 else:
     print("No GSC specific config to create.")
-    print("""
-    Use --config options such as:
-        id: (required)
-        biopsy: eg biop2 - optional - find libraries
-        tumour_lib:
-        normal_lib:
-        gsc_config_filename: (optional) specify output config filename
-        project: (optional) specify project
-    """)
+    print(USAGE)
     sys.exit()
 
 if "biopsy" in config.keys():
-    config["tumour_lib"], config["normal_lib"] = get_biopsy_dna_tumour_normal(patient_id=config["id"], biopsy=config["biopsy"])
+    config["tumour_lib"], config["normal_lib"] = get_biopsy_dna_tumour_normal(
+        patient_id=config["id"], biopsy=config["biopsy"]
+    )
 
 # Find an output filename for the config we are generating
 if "gsc_config_filename" in config.keys():
