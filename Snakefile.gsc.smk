@@ -52,7 +52,7 @@ else:
 
 # Script building the config if needed
 if not os.path.exists(output_filename):
-    logger.info(f"Creating {output_filename}")
+    print(f"Creating {output_filename}")
     args = SimpleNamespace(**config)
     args.pipeline_ver = pipeline_ver
     args.ploidetect_ver = ploidetect_ver
