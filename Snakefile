@@ -65,7 +65,7 @@ def devtools_install():
         devtools_cmd = "\"devtools::install_local('" + install_path + "')\""
     else:
         devtools_cmd = "\"devtools::install_github('lculibrk/Ploidetect', "
-        devtools_cmd += "ref = '" + config["ploidetect_github_version"] + "')\""
+        devtools_cmd += "ref = '" + config["ploidetect_ver"] + "')\""
     return(devtools_cmd)
 
 rule install_ploidetect:

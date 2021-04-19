@@ -31,8 +31,6 @@ Examples:
 # start with defaults
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
-ploidetect_ver = config["ploidetect_github_version"]
-
 if "id" in config.keys() and (
     ("biopsy" in config.keys())
     or ("tumour_lib" in config.keys() and "normal_lib" in config.keys())
@@ -57,7 +55,7 @@ else:
         tumour_lib=config["tumour_lib"],
         normal_lib=config["normal_lib"],
         pipeline_ver=pipeline_ver,
-        ploidetect_ver=ploidetect_ver,
+        ploidetect_ver=config["ploidetect_ver"],
         project=config["project"] if "project" in config.keys() else None,
     )
     output_filename = os.path.join(output_dir, CONFIG_BASENAME)
@@ -67,7 +65,6 @@ if not os.path.exists(output_filename):
     print(f"Creating {output_filename}")
     args = SimpleNamespace(**config)
     args.pipeline_ver = pipeline_ver
-    args.ploidetect_ver = ploidetect_ver
     args.output_file = output_filename
     args.patient_id = args.id
     build_config(args=args)

@@ -11,7 +11,7 @@ from os.path import abspath, dirname, exists, join, realpath
 from ProjectInfo import BioappsApi
 from ruamel_yaml import YAML
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 API = BioappsApi()
 CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
 GENOME_DATA = """\
@@ -210,8 +210,8 @@ def build_config(
         genome_name: hg19
         output_dir: /projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect/Ploidetect-pipeline-undefined/Ploidetect-undefined
         temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590
-        # ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone.
-        ploidetect_github_version: undefined
+        # ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
+        ploidetect_ver: undefined
         # Leave ploidetect_local_clone blank or 'None' to download from github
         ploidetect_local_clone: /gsc/pipelines/Ploidetect/undefined
         use-docker: 0
@@ -284,9 +284,9 @@ def build_config(
 
     # Ploidetect installation and versions.
     yaml_lines.append(
-        "# ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone."
+        "# ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone."
     )
-    yaml_lines.append(f"ploidetect_github_version: {ploidetect_ver}")
+    yaml_lines.append(f"ploidetect_ver: {ploidetect_ver}")
     yaml_lines.append(
         "# Leave ploidetect_local_clone blank or 'None' to download from github"
     )
