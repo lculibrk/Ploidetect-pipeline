@@ -41,42 +41,33 @@ rule all:
     input:
         output_list
 
-def check_docker():
-    """Ploidetect installed filepath.
-    Filename to create on a successful install or check for successful installation.
-    Checks the config file for docker options.
-    """
-    if config["use-docker"] == 1:
-    # /dev/null should be present in basically every 'nix system
-    # This ensures that install_ploidetect isn't run
-        file_to_make = "/dev/null"
-    else:
-    # if not using docker, should install Ploidetect
-        file_to_make = os.path.join(workflow.basedir, "conda_configs/ploidetect_installed.txt")
-    return(file_to_make)
 
-def devtools_install():
-    if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
-        install_path = config["ploidetect_local_clone"].format(**config)
-        devtools_cmd = "\"devtools::install_local('" + install_path + "')\""
-    else:
-        devtools_cmd = "\"devtools::install_github('lculibrk/Ploidetect', "
-        devtools_cmd += "ref = '" + config["ploidetect_ver"] + "')\""
-    return(devtools_cmd)
+if not config["use_docker"]:
+    # This ensures that install_ploidetect is run first
+    ruleorder: install_ploidetect > ploidetect
 
-rule install_ploidetect:
-    """Install Ploidetect R script into environment"""
-    output:
-        expand("{install_dir}/conda_configs/ploidetect_installed.txt", install_dir=workflow.basedir)
-    resources: cpus=1, mem_mb=7900
-    conda:
-        "conda_configs/r.yaml"
-    params:
-        devtools_install()
-    shell:
-        "export LC_ALL=en_US.UTF-8; "
-        " Rscript -e {params} "
-        " && echo {params} > {output} && date >> {output}"
+    def devtools_install():
+        if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
+            install_path = config["ploidetect_local_clone"].format(**config)
+            devtools_cmd = "\"devtools::install_local('" + install_path + "')\""
+        else:
+            devtools_cmd = "\"devtools::install_github('lculibrk/Ploidetect', "
+            devtools_cmd += "ref = '" + config["ploidetect_ver"] + "')\""
+        return(devtools_cmd)
+
+    rule install_ploidetect:
+        """Install Ploidetect R script into environment"""
+        output:
+            expand("{install_dir}/conda_configs/ploidetect_installed.txt", install_dir=workflow.basedir)
+        resources: cpus=1, mem_mb=7900
+        conda:
+            "conda_configs/r.yaml"
+        params:
+            devtools_install()
+        shell:
+            "export LC_ALL=en_US.UTF-8; "
+            " Rscript -e {params} "
+            " && echo {params} > {output} && date >> {output}"
 
 
 rule germline_cov:
@@ -257,8 +248,7 @@ rule preseg:
 rule ploidetect:
     """Runs Ploidetect"""
     input:
-        rules.preseg.output,
-	    check_docker()
+        rules.preseg.output
     output:
         plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
         models="{output_dir}/{case}/{somatic}_{normal}/models.txt",

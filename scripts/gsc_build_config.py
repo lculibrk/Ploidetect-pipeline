@@ -214,7 +214,7 @@ def build_config(
         ploidetect_ver: undefined
         # Leave ploidetect_local_clone blank or 'None' to download from github
         ploidetect_local_clone: /gsc/pipelines/Ploidetect/undefined
-        use-docker: 0
+        use_docker: 0
         # Reference data.  Selected by 'genome_name' value.
         genome:
           hg19: /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
@@ -293,7 +293,7 @@ def build_config(
     yaml_lines.append(
         f"ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}"
     )
-    yaml_lines.append(f"use-docker: {1 if bool(use_docker) else 0}")
+    yaml_lines.append(f"use_docker: {1 if bool(use_docker) else 0}")
 
     # Genomic Reference data
     yaml_lines.append(GENOME_DATA)
@@ -337,7 +337,7 @@ def parse_args():
         help="Specify a project instead of bioapps lookup by patient_id.",
     )
 
-    parser.add_argument("-d", "--use-docker", help="Set use docker/slurm tag")
+    parser.add_argument("-d", "--use_docker", help="Set use docker/slurm tag")
     parser.add_argument(
         "--version",
         action="version",
