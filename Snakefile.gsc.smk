@@ -27,10 +27,6 @@ Examples:
 
     Snakefile.gsc.smk --config id=COLO829-TestA tumour_lib=A36971 normal_lib=A36973 project=POG
 """
-
-# start with defaults
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
-
 if "id" in config.keys() and (
     ("biopsy" in config.keys())
     or ("tumour_lib" in config.keys() and "normal_lib" in config.keys())
@@ -46,7 +42,13 @@ if "biopsy" in config.keys():
         patient_id=config["id"], biopsy=config["biopsy"]
     )
 
-output_dir = config["output_dir"] if "output_dir" in config.keys() else get_gsc_output_folder(
+# Current output_dir value, before loading any defaults.
+output_dir = config["output_dir"] if "output_dir" in config.keys() else ""
+
+# Load default config values.
+configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+
+output_dir = output_dir if output_dir else get_gsc_output_folder(
     patient_id=config["id"],
     tumour_lib=config["tumour_lib"],
     normal_lib=config["normal_lib"],
@@ -74,6 +76,9 @@ if not os.path.exists(output_filename):
 print(f"config: {os.path.abspath(output_filename)}")
 config = dict()  # Remove any existing values
 configfile: output_filename
+
+# Setting the workdir is less flexible, but should keep logs and paramters organized.
+workdir: output_dir
 
 module ploidetect:
     snakefile: "Snakefile"
