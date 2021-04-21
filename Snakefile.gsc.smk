@@ -46,18 +46,19 @@ if "biopsy" in config.keys():
         patient_id=config["id"], biopsy=config["biopsy"]
     )
 
+output_dir = config["output_dir"] if "output_dir" in config.keys() else get_gsc_output_folder(
+    patient_id=config["id"],
+    tumour_lib=config["tumour_lib"],
+    normal_lib=config["normal_lib"],
+    pipeline_ver=pipeline_ver,
+    ploidetect_ver=config["ploidetect_ver"],
+    project=config["project"] if "project" in config.keys() else None,
+)
+
 # Find an output filename for the config we are generating
 if "gsc_config_filename" in config.keys():
     output_filename = config["gsc_config_filename"]
 else:
-    output_dir = get_gsc_output_folder(
-        patient_id=config["id"],
-        tumour_lib=config["tumour_lib"],
-        normal_lib=config["normal_lib"],
-        pipeline_ver=pipeline_ver,
-        ploidetect_ver=config["ploidetect_ver"],
-        project=config["project"] if "project" in config.keys() else None,
-    )
     output_filename = os.path.join(output_dir, CONFIG_BASENAME)
 
 # Script building the config if needed
@@ -69,10 +70,11 @@ if not os.path.exists(output_filename):
     args.patient_id = args.id
     build_config(args=args)
 
-print(f"config: {output_filename}")
-
 # Run the standard Snakemake pipeline with the appropriate config
+print(f"config: {os.path.abspath(output_filename)}")
+config = dict()  # Remove any existing values
 configfile: output_filename
+
 module ploidetect:
     snakefile: "Snakefile"
     config: config

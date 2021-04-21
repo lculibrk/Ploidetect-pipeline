@@ -6,18 +6,19 @@ sys.path.insert(0, workflow.basedir)
 from constants import VERSION
 print(f"Ploidetect-pipeline {VERSION}")
 
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
-
-output_dir = config["output_dir"]
-
 ## Load config values
-chromosomes=config["chromosomes"]
+configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+chromosomes = config["chromosomes"]
 output_dir = config["output_dir"]
 if "temp_dir" not in config or not config["temp_dir"]:
     config["temp_dir"] = f"{output_dir}/temp"
 temp_dir = config["temp_dir"]
 if temp_dir[-1] != "/":
     temp_dir += "/"  # Prevents strange case wild-card error.
+
+scripts_dir = os.path.join(workflow.basedir, "scripts")
+array_positions = config["array_positions"][config["genome_name"]] if os.path.exists(config["array_positions"][config["genome_name"]]) else os.path.join(workflow.basedir, config["array_positions"][config["genome_name"]])
+
 
 ## Parse sample information
 bams_dict = config['bams']
@@ -33,13 +34,8 @@ for sample in sample_ids:
     combinations = expand("{somatic}_{normal}", somatic = somatics, normal = normals)
     outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
     output_list.extend(outs)
+print(f"Final outputs: {output_list}")
 
-
-
-scripts_dir = os.path.join(workflow.basedir, "scripts")
-array_positions = config["array_positions"][config["genome_name"]] if os.path.exists(config["array_positions"][config["genome_name"]]) else os.path.join(workflow.basedir, config["array_positions"][config["genome_name"]])
-
-print(output_list)
 
 rule all:
     input:

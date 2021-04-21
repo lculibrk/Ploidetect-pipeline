@@ -330,6 +330,7 @@ def parse_args():
         help="specify a config filename.",
         default=f"DERIVED_OUTPUT_DIR/{CONFIG_BASENAME}",
     )
+    parser.add_argument("--output_dir", help="Output directory override.")
     parser.add_argument(
         "-p",
         "--project",
