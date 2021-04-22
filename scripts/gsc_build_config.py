@@ -209,7 +209,7 @@ def build_config(
               P02590: /projects/analysis/analysis30/P02590/HCW32CCXY_8/P02590/150nt/hg19a/bwa-mem-0.7.6a-sb/P02590_1_lane_dupsFlagged.bam
         genome_name: hg19
         output_dir: /projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect/Ploidetect-pipeline-undefined/Ploidetect-undefined
-        temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590
+        temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590...
         # ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
         ploidetect_ver: undefined
         # Leave ploidetect_local_clone blank or 'None' to download from github
@@ -278,9 +278,16 @@ def build_config(
     yaml_lines.append(
         f"output_dir: {get_gsc_output_folder(patient_id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=project)}"
     )
-    yaml_lines.append(
-        f"temp_dir: {get_ploidetect_temp_folder(patient_id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=project)}"
+    temp_dir = get_ploidetect_temp_folder(
+        patient_id,
+        tumour_lib,
+        normal_lib,
+        pipeline_ver,
+        ploidetect_ver,
+        project=project,
     )
+    temp_dir = join(temp_dir, datetime.now().strftime("%Y%m%d_%H%M%S"))
+    yaml_lines.append(f"temp_dir: {temp_dir}")
 
     # Ploidetect installation and versions.
     yaml_lines.append(
