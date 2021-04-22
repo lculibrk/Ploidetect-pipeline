@@ -166,11 +166,11 @@ rule compute_loh:
         sombam= lambda w: config["bams"][w.case]["somatic"][w.somatic],
         normbam= lambda w: config["bams"][w.case]["normal"][w.normal],
     output:
+        temp(directory("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/")),
         temp("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt")
     params:
         genome = config["genome"][config["genome_name"]],
         array_positions = {array_positions},
-        temp_dir = temp_dir
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -178,7 +178,8 @@ rule compute_loh:
         "docker://lculibrk/ploidetect"
     shell:
         "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
-        " {params.genome} {params.array_positions} {params.temp_dir}/loh_tmp/"
+        " {params.genome} {params.array_positions}"
+        " {output[0]}"
 
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
