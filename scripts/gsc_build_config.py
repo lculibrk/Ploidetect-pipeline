@@ -11,7 +11,7 @@ from os.path import abspath, dirname, exists, join, realpath
 from ProjectInfo import BioappsApi
 from ruamel_yaml import YAML
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 API = BioappsApi()
 CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
 GENOME_DATA = """\
@@ -67,8 +67,8 @@ def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
     tumour_libs = [
         lib for lib in libs if API.get_biopsy(lib) == biopsy and API.is_dna_library(lib)
     ]
-    assert len(normals) == 1
-    assert len(tumour_libs) == 1
+    assert len(normals) == 1, f"Multiple normal libs: {normals}"
+    assert len(tumour_libs) == 1, f"Multiple {biopsy} tumour_libs: {tumour_libs}"
     return (tumour_libs[0], normals[0])
 
 
@@ -189,7 +189,7 @@ def build_config(
     normal_lib=None,
     pipeline_ver="undefined",
     ploidetect_ver="undefined",
-    use_docker=False,
+    install_ploidetect=False,
     project=None,
     **kwargs,
 ):
@@ -209,12 +209,12 @@ def build_config(
               P02590: /projects/analysis/analysis30/P02590/HCW32CCXY_8/P02590/150nt/hg19a/bwa-mem-0.7.6a-sb/P02590_1_lane_dupsFlagged.bam
         genome_name: hg19
         output_dir: /projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect/Ploidetect-pipeline-undefined/Ploidetect-undefined
-        temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590
-        # ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone.
-        ploidetect_github_version: undefined
+        temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590...
+        # ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
+        ploidetect_ver: undefined
         # Leave ploidetect_local_clone blank or 'None' to download from github
         ploidetect_local_clone: /gsc/pipelines/Ploidetect/undefined
-        use-docker: 0
+        install_ploidetect: 0
         # Reference data.  Selected by 'genome_name' value.
         genome:
           hg19: /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
@@ -278,22 +278,29 @@ def build_config(
     yaml_lines.append(
         f"output_dir: {get_gsc_output_folder(patient_id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=project)}"
     )
-    yaml_lines.append(
-        f"temp_dir: {get_ploidetect_temp_folder(patient_id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=project)}"
+    temp_dir = get_ploidetect_temp_folder(
+        patient_id,
+        tumour_lib,
+        normal_lib,
+        pipeline_ver,
+        ploidetect_ver,
+        project=project,
     )
+    temp_dir = join(temp_dir, datetime.now().strftime("%Y%m%d_%H%M%S"))
+    yaml_lines.append(f"temp_dir: {temp_dir}")
 
     # Ploidetect installation and versions.
     yaml_lines.append(
-        "# ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone."
+        "# ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone."
     )
-    yaml_lines.append(f"ploidetect_github_version: {ploidetect_ver}")
+    yaml_lines.append(f"ploidetect_ver: {ploidetect_ver}")
     yaml_lines.append(
         "# Leave ploidetect_local_clone blank or 'None' to download from github"
     )
     yaml_lines.append(
         f"ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}"
     )
-    yaml_lines.append(f"use-docker: {1 if bool(use_docker) else 0}")
+    yaml_lines.append(f"install_ploidetect: {1 if bool(install_ploidetect) else 0}")
 
     # Genomic Reference data
     yaml_lines.append(GENOME_DATA)
@@ -330,13 +337,14 @@ def parse_args():
         help="specify a config filename.",
         default=f"DERIVED_OUTPUT_DIR/{CONFIG_BASENAME}",
     )
+    parser.add_argument("--output_dir", help="Output directory override.")
     parser.add_argument(
         "-p",
         "--project",
         help="Specify a project instead of bioapps lookup by patient_id.",
     )
 
-    parser.add_argument("-d", "--use-docker", help="Set use docker/slurm tag")
+    parser.add_argument("--install_ploidetect", help="Install into local R.")
     parser.add_argument(
         "--version",
         action="version",
