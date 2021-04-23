@@ -67,8 +67,8 @@ def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
     tumour_libs = [
         lib for lib in libs if API.get_biopsy(lib) == biopsy and API.is_dna_library(lib)
     ]
-    assert len(normals) == 1
-    assert len(tumour_libs) == 1
+    assert len(normals) == 1, f"Multiple normal libs: {normals}"
+    assert len(tumour_libs) == 1, f"Multiple {biopsy} tumour_libs: {tumour_libs}"
     return (tumour_libs[0], normals[0])
 
 
