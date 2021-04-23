@@ -6,18 +6,19 @@ sys.path.insert(0, workflow.basedir)
 from constants import VERSION
 print(f"Ploidetect-pipeline {VERSION}")
 
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
-
-output_dir = config["output_dir"]
-
 ## Load config values
-chromosomes=config["chromosomes"]
+configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+chromosomes = config["chromosomes"]
 output_dir = config["output_dir"]
 if "temp_dir" not in config or not config["temp_dir"]:
     config["temp_dir"] = f"{output_dir}/temp"
 temp_dir = config["temp_dir"]
 if temp_dir[-1] != "/":
     temp_dir += "/"  # Prevents strange case wild-card error.
+
+scripts_dir = os.path.join(workflow.basedir, "scripts")
+array_positions = config["array_positions"][config["genome_name"]] if os.path.exists(config["array_positions"][config["genome_name"]]) else os.path.join(workflow.basedir, config["array_positions"][config["genome_name"]])
+
 
 ## Parse sample information
 bams_dict = config['bams']
@@ -33,31 +34,13 @@ for sample in sample_ids:
     combinations = expand("{somatic}_{normal}", somatic = somatics, normal = normals)
     outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
     output_list.extend(outs)
+print(f"Final outputs: {output_list}")
 
-
-
-scripts_dir = os.path.join(workflow.basedir, "scripts")
-array_positions = config["array_positions"][config["genome_name"]] if os.path.exists(config["array_positions"][config["genome_name"]]) else os.path.join(workflow.basedir, config["array_positions"][config["genome_name"]])
-
-print(output_list)
 
 rule all:
     input:
         output_list
 
-def check_docker():
-    """Ploidetect installed filepath.
-    Filename to create on a successful install or check for successful installation.
-    Checks the config file for docker options.
-    """
-    if config["use-docker"] == 1:
-    # /dev/null should be present in basically every 'nix system
-    # This ensures that install_ploidetect isn't run
-        file_to_make = "/dev/null"
-    else:
-    # if not using docker, should install Ploidetect
-        file_to_make = os.path.join(workflow.basedir, "conda_configs/ploidetect_installed.txt")
-    return(file_to_make)
 
 def devtools_install():
     if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
@@ -65,10 +48,11 @@ def devtools_install():
         devtools_cmd = "\"devtools::install_local('" + install_path + "')\""
     else:
         devtools_cmd = "\"devtools::install_github('lculibrk/Ploidetect', "
-        devtools_cmd += "ref = '" + config["ploidetect_github_version"] + "')\""
+        devtools_cmd += "ref = '" + config["ploidetect_ver"] + "')\""
     return(devtools_cmd)
 
-rule install_ploidetect:
+
+rule ploidetect_install:
     """Install Ploidetect R script into environment"""
     output:
         expand("{install_dir}/conda_configs/ploidetect_installed.txt", install_dir=workflow.basedir)
@@ -77,6 +61,7 @@ rule install_ploidetect:
         "conda_configs/r.yaml"
     params:
         devtools_install()
+    version: config["ploidetect_ver"]
     shell:
         "export LC_ALL=en_US.UTF-8; "
         " Rscript -e {params} "
@@ -179,11 +164,11 @@ rule compute_loh:
         sombam= lambda w: config["bams"][w.case]["somatic"][w.somatic],
         normbam= lambda w: config["bams"][w.case]["normal"][w.normal],
     output:
+        temp(directory("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/")),
         temp("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt")
     params:
         genome = config["genome"][config["genome_name"]],
         array_positions = {array_positions},
-        temp_dir = temp_dir
     resources: cpus=1, mem_mb=7900
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -191,7 +176,8 @@ rule compute_loh:
         "docker://lculibrk/ploidetect"
     shell:
         "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
-        " {params.genome} {params.array_positions} {params.temp_dir}/loh_tmp/"
+        " {params.genome} {params.array_positions}"
+        " {output[0]}"
 
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
@@ -262,7 +248,7 @@ rule ploidetect:
     """Runs Ploidetect"""
     input:
         rules.preseg.output,
-	    check_docker()
+        rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config["install_ploidetect"] else __file__
     output:
         plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
         models="{output_dir}/{case}/{somatic}_{normal}/models.txt",

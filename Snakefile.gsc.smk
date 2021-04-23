@@ -27,12 +27,6 @@ Examples:
 
     Snakefile.gsc.smk --config id=COLO829-TestA tumour_lib=A36971 normal_lib=A36973 project=POG
 """
-
-# start with defaults
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
-
-ploidetect_ver = config["ploidetect_github_version"]
-
 if "id" in config.keys() and (
     ("biopsy" in config.keys())
     or ("tumour_lib" in config.keys() and "normal_lib" in config.keys())
@@ -48,18 +42,25 @@ if "biopsy" in config.keys():
         patient_id=config["id"], biopsy=config["biopsy"]
     )
 
+# Current output_dir value, before loading any defaults.
+output_dir = config["output_dir"] if "output_dir" in config.keys() else ""
+
+# Load default config values.
+configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+
+output_dir = output_dir if output_dir else get_gsc_output_folder(
+    patient_id=config["id"],
+    tumour_lib=config["tumour_lib"],
+    normal_lib=config["normal_lib"],
+    pipeline_ver=pipeline_ver,
+    ploidetect_ver=config["ploidetect_ver"],
+    project=config["project"] if "project" in config.keys() else None,
+)
+
 # Find an output filename for the config we are generating
 if "gsc_config_filename" in config.keys():
     output_filename = config["gsc_config_filename"]
 else:
-    output_dir = get_gsc_output_folder(
-        patient_id=config["id"],
-        tumour_lib=config["tumour_lib"],
-        normal_lib=config["normal_lib"],
-        pipeline_ver=pipeline_ver,
-        ploidetect_ver=ploidetect_ver,
-        project=config["project"] if "project" in config.keys() else None,
-    )
     output_filename = os.path.join(output_dir, CONFIG_BASENAME)
 
 # Script building the config if needed
@@ -67,15 +68,18 @@ if not os.path.exists(output_filename):
     print(f"Creating {output_filename}")
     args = SimpleNamespace(**config)
     args.pipeline_ver = pipeline_ver
-    args.ploidetect_ver = ploidetect_ver
     args.output_file = output_filename
     args.patient_id = args.id
     build_config(args=args)
 
-print(f"config: {output_filename}")
-
 # Run the standard Snakemake pipeline with the appropriate config
+print(f"config: {os.path.abspath(output_filename)}")
+config = dict()  # Remove any existing values
 configfile: output_filename
+
+# Setting the workdir is less flexible, but should keep logs and paramters organized.
+workdir: output_dir
+
 module ploidetect:
     snakefile: "Snakefile"
     config: config

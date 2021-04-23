@@ -1,9 +1,9 @@
 
 bams:
     COLO829-TestA:
-        somatic: 
+        somatic:
             A36971: /projects/POG/POG_data/COLO829-TestA/wgs/biop1_t_A36971/merge/hg19a_bwa-mem-0.7.6a/A36971_2_lanes_dupsFlagged.bam
-        normal: 
+        normal:
             A36973: /projects/POG/POG_data/COLO829-TestA/wgs/blood1_n_A36973/merge/hg19a_bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam
 
 # genome_name should match bams
@@ -13,13 +13,13 @@ genome_name:
 output_dir: "ploidetect_out"
 temp_dir:
 
-# ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone.
-ploidetect_github_version: v1.0.0
+# ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
+ploidetect_ver: v1.0.0
 # Leave ploidetect_local_clone blank or 'None' to download from github
-ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_github_version}
+ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}
 
 # are we using docker?
-use-docker: 1
+install_ploidetect: 0
 
 # Reference data.  Selected by 'genome_name' value.
 genome:
