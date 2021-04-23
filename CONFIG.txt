@@ -19,7 +19,7 @@ ploidetect_ver: v1.0.0
 ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}
 
 # are we using docker?
-use_docker: 0
+install_ploidetect: 0
 
 # Reference data.  Selected by 'genome_name' value.
 genome:
