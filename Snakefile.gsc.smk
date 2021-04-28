@@ -8,7 +8,11 @@ sys.path.insert(0, workflow.basedir)
 scripts_dir = os.path.join(workflow.basedir, "scripts")
 sys.path.append(scripts_dir)
 from constants import VERSION as pipeline_ver
-from gsc_build_config import CONFIG_BASENAME, get_biopsy_dna_tumour_normal, get_gsc_output_folder
+from gsc_build_config import (
+    CONFIG_BASENAME,
+    get_biopsy_dna_tumour_normal,
+    get_gsc_output_folder,
+)
 from gsc_build_config import main as build_config
 
 USAGE = """\
@@ -45,16 +49,22 @@ if "biopsy" in config.keys():
 # Current output_dir value, before loading any defaults.
 output_dir = config["output_dir"] if "output_dir" in config.keys() else ""
 
+
 # Load default config values.
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
-output_dir = output_dir if output_dir else get_gsc_output_folder(
-    patient_id=config["id"],
-    tumour_lib=config["tumour_lib"],
-    normal_lib=config["normal_lib"],
-    pipeline_ver=pipeline_ver,
-    ploidetect_ver=config["ploidetect_ver"],
-    project=config["project"] if "project" in config.keys() else None,
+
+output_dir = (
+    output_dir
+    if output_dir
+    else get_gsc_output_folder(
+        patient_id=config["id"],
+        tumour_lib=config["tumour_lib"],
+        normal_lib=config["normal_lib"],
+        pipeline_ver=pipeline_ver,
+        ploidetect_ver=config["ploidetect_ver"],
+        project=config["project"] if "project" in config.keys() else None,
+    )
 )
 
 # Find an output filename for the config we are generating
@@ -75,13 +85,20 @@ if not os.path.exists(output_filename):
 # Run the standard Snakemake pipeline with the appropriate config
 print(f"config: {os.path.abspath(output_filename)}")
 config = dict()  # Remove any existing values
+
+
 configfile: output_filename
+
 
 # Setting the workdir is less flexible, but should keep logs and paramters organized.
 workdir: output_dir
 
+
 module ploidetect:
-    snakefile: "Snakefile"
-    config: config
+    snakefile:
+        "Snakefile"
+    config:
+        config
+
 
 use rule * from ploidetect
