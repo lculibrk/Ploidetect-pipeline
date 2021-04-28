@@ -8,7 +8,12 @@ Data pre-procesing pipeline for https://github.com/lculibrk/Ploidetect
 
 Check for a snakemake installation: `which snakemake`
 
-If not found, suggest installing a conda enviroment for snakemake.
+If not found, install a conda environment for snakemake.  Use the Makefile:
+```
+make snakemake_env
+```
+
+or use the instructions below.
 
 If conda is not installed on the current system, install miniconda:
 
@@ -37,7 +42,7 @@ This option may take longer and be less stable
 #### Option2: Install only snakemake
 
 ```
-mamba install snakemake --yes
+conda install snakemake --yes
 ```
 or
 ```
