@@ -1,4 +1,4 @@
-# Temp files
+B# Temp files
 .snakemake
 *~
 .vscode
@@ -7,3 +7,4 @@ __pycache__
 miniconda
 env/
 venv/
+resources/annotations
