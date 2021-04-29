@@ -6,3 +6,4 @@ dependencies:
  - r-data.table
  - r-devtools
  - r-ggrastr
+ - bioconductor-genomicranges
