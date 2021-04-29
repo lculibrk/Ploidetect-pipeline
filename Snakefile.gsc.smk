@@ -113,14 +113,10 @@ module ploidetect:
 use rule * from ploidetect
 
 
-
-
-
-
 rule annotate_genes:
     """Add Gene info to copynumber change info."""
     input:
-        cna=f"{output_dir}/{case}/{somatic}_{normal}/cna.txt",
+        cna=f"{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
         gtf={config["annotation"][config["genome_name"]]},
     output:
         f"{output_dir}/cna_genes.bed",

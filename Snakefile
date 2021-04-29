@@ -328,6 +328,7 @@ rule ploidetect_copynumber:
     output:
         "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
         "{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
+        "{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
     conda:
         "conda_configs/r.yaml"
     log:
