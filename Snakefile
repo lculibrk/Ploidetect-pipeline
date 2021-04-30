@@ -12,6 +12,9 @@ print(f"Ploidetect-pipeline {VERSION}")
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
 
+
+MEM_PER_CPU = 7900
+
 chromosomes = config["chromosomes"]
 output_dir = config["output_dir"]
 if "temp_dir" not in config or not config["temp_dir"]:
@@ -71,7 +74,7 @@ rule ploidetect_install:
         ),
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/r.yaml"
     params:
@@ -92,7 +95,7 @@ rule germline_cov:
         temp("{temp_dir}/{case}/{lib}/normal/{chr}.bed"),
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -112,7 +115,7 @@ rule merge_germline:
         temp("{temp_dir}/{case}/{normal}/germline.bed"),
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -129,7 +132,7 @@ rule makewindowfile:
         temp("{temp_dir}/{case}/{normal}/windows.txt"),
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -146,8 +149,7 @@ rule splitwindowfile:
         temp("{temp_dir}/{case}/{normal}/windows/{chr}.txt"),
     resources:
         cpus=1,
-        mem_mb=7900,
-    conda:
+        mem_mb=MEM_PER_CPU,
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
@@ -165,8 +167,7 @@ rule genomecovsomatic:
         temp("{temp_dir}/{case}/{somatic}_{normal}/tumour/{chr}.bed"),
     resources:
         cpus=1,
-        mem_mb=7900,
-    conda:
+        mem_mb=MEM_PER_CPU,
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
@@ -185,7 +186,7 @@ rule mergesomatic:
         temp("{temp_dir}/{case}/{somatic}_{normal}/tumour.bed"),
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -207,7 +208,7 @@ rule compute_loh:
         array_positions={array_positions},
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -227,7 +228,7 @@ rule process_loh:
         temp("{temp_dir}/{case}/{somatic}_{normal}/loh.bed"),
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -249,7 +250,7 @@ rule getgc:
         genome=config["genome"][config["genome_name"]],
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -269,7 +270,7 @@ rule mergedbed:
         temp("{temp_dir}/{case}/{somatic}_{normal}/merged.bed"),
     resources:
         cpus=1,
-        mem_mb=7900,
+        mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -286,7 +287,7 @@ rule preseg:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
     resources:
         cpus=24,
-        mem_mb=189600,
+        mem_mb=24 * MEM_PER_CPU,
     conda:
         "conda_configs/r.yaml"
     container:
@@ -310,7 +311,7 @@ rule ploidetect:
         "conda_configs/r.yaml"
     resources:
         cpus=24,
-        mem_mb=189600,
+        mem_mb=24 * MEM_PER_CPU,
     container:
         "docker://lculibrk/ploidetect"
     shell:
@@ -328,12 +329,13 @@ rule ploidetect_copynumber:
     output:
         "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
         "{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
+        "{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
     conda:
         "conda_configs/r.yaml"
     log:
         "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt",
     resources:
         cpus=24,
-        mem_mb=189600,
+        mem_mb=24 * MEM_PER_CPU,
     shell:
         "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"

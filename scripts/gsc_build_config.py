@@ -23,6 +23,11 @@ genome:
         /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
     hg38:
         /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
+annotation:
+    hg19:
+        /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
+    hg38:
+        /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
 array_positions:
     hg19:
         "resources/snp_arrays/hg19/SNP_array_positions.txt"
