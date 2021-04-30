@@ -103,16 +103,6 @@ rule complete:
         f"{output_dir}/cna_genes.bed",
 
 
-module ploidetect:
-    snakefile:
-        "Snakefile"
-    config:
-        config
-
-
-use rule * from ploidetect
-
-
 rule annotate_genes:
     """Add Gene info to copynumber change info."""
     input:
@@ -126,3 +116,13 @@ rule annotate_genes:
         "conda_configs/r.yaml"
     shell:
         "Rscript {scripts_dir}/annotate.R -i {input.cna} -a {input.gtf} -o {output}"
+
+
+module ploidetect:
+    snakefile:
+        "Snakefile"
+    config:
+        config
+
+
+use rule * from ploidetect
