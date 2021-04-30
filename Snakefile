@@ -12,7 +12,9 @@ print(f"Ploidetect-pipeline {VERSION}")
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
 
+
 MEM_PER_CPU = 7900
+
 chromosomes = config["chromosomes"]
 output_dir = config["output_dir"]
 if "temp_dir" not in config or not config["temp_dir"]:
@@ -148,7 +150,6 @@ rule splitwindowfile:
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
-    conda:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
@@ -167,7 +168,6 @@ rule genomecovsomatic:
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
-    conda:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"

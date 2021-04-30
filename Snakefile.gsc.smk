@@ -89,7 +89,6 @@ if not os.path.exists(gsc_config_filename):
 print(f"config: {os.path.abspath(gsc_config_filename)}")
 config = dict()  # Remove any existing values
 
-
 configfile: gsc_config_filename
 
 
@@ -116,7 +115,6 @@ rule annotate_genes:
         "conda_configs/r.yaml"
     shell:
         "Rscript {scripts_dir}/annotate.R -i {input.cna} -a {input.gtf} -o {output}"
-
 
 module ploidetect:
     snakefile:
