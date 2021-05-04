@@ -150,6 +150,7 @@ rule splitwindowfile:
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
+    conda:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
@@ -168,6 +169,7 @@ rule genomecovsomatic:
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
+    conda:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
