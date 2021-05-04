@@ -57,6 +57,7 @@ chromosomes:
  - 21
  - 22
  - X
+ - Y
 """
 
 
