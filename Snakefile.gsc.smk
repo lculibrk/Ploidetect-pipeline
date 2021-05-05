@@ -80,6 +80,8 @@ configfile: output_filename
 # Setting the workdir is less flexible, but should keep logs and paramters organized.
 workdir: output_dir
 
+container: "docker://lculibrk/ploidetect"
+
 module ploidetect:
     snakefile: "Snakefile"
     config: config
