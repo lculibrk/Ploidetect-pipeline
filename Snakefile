@@ -277,5 +277,7 @@ rule ploidetect_copynumber:
     log:
         "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt"
     resources: cpus=24, mem_mb=189600
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
         "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
