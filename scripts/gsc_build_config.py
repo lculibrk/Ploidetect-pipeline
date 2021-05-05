@@ -11,7 +11,9 @@ from os.path import abspath, dirname, exists, join, realpath
 from ProjectInfo import BioappsApi
 from ruamel_yaml import YAML
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
+
+logger = logging.getLogger(__name__)
 API = BioappsApi()
 CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
 GENOME_DATA = """\
@@ -21,6 +23,11 @@ genome:
         /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
     hg38:
         /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
+annotation:
+    hg19:
+        /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
+    hg38:
+        /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
 array_positions:
     hg19:
         "resources/snp_arrays/hg19/SNP_array_positions.txt"
@@ -50,6 +57,7 @@ chromosomes:
  - 21
  - 22
  - X
+ - Y
 """
 
 
@@ -67,8 +75,8 @@ def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
     tumour_libs = [
         lib for lib in libs if API.get_biopsy(lib) == biopsy and API.is_dna_library(lib)
     ]
-    assert len(normals) == 1
-    assert len(tumour_libs) == 1
+    assert len(normals) == 1, f"Multiple normal libs: {normals}"
+    assert len(tumour_libs) == 1, f"Multiple {biopsy} tumour_libs: {tumour_libs}"
     return (tumour_libs[0], normals[0])
 
 
@@ -76,7 +84,7 @@ def get_project_info(patient_id):
     """Return a single project_info dict for the patient."""
     proj_info = API.get_biofx_project_info(patient_id, tumour_char_only=True)
     if len(proj_info) > 1:
-        logging.error(
+        logger.error(
             f"Assuming project: {proj_info[0]['name']}"
             f" - ignoring {[pi['name'] for pi in proj_info[1:]]}"
         )
@@ -166,12 +174,12 @@ def get_bam(library, genome_reference=None):
     for bam in bams_all:
         bam_fns = glob.glob(join(bam["data_path"], "*.bam"))
         if not bam_fns:  # GERO-114 - COLO829 - no bam in path
-            logging.error(f"No bam found in path: {bam['data_path']}")
+            logger.error(f"No bam found in path: {bam['data_path']}")
         else:
             bams.append(bam)
     for bam in bams[1:]:
         warn = f"Ignoring tumour bam {bam['data_path']}"
-        logging.warning(warn)
+        logger.warning(warn)
 
     bam_fns = glob.glob(join(bams[0]["data_path"], "*.bam"))
     assert len(bam_fns) == 1, f"Bam finding error for: '{library}'"
@@ -189,8 +197,9 @@ def build_config(
     normal_lib=None,
     pipeline_ver="undefined",
     ploidetect_ver="undefined",
-    use_docker=False,
+    install_ploidetect=False,
     project=None,
+    **kwargs,
 ):
     """Build a GSC config for running Ploidetect.
 
@@ -200,21 +209,20 @@ def build_config(
         >>> cfg = build_config("POG965", biopsy="biop2")
         >>> YAML().dump(cfg, sys.stdout)  # doctest:+ELLIPSIS +NORMALIZE_WHITESPACE
         # Created by: ...
-        id: POG965
-        libs:
-          tumour: P02866
-          normal: P02590
         bams:
-          somatic: /projects/analysis/analysis30/P02866/merge32550_bwa-mem-0.7.6a-sb/150bp/hg19a/P02866_3_lanes_dupsFlagged.bam
-          normal: /projects/analysis/analysis30/P02590/HCW32CCXY_8/P02590/150nt/hg19a/bwa-mem-0.7.6a-sb/P02590_1_lane_dupsFlagged.bam
+          POG965:
+            somatic:
+              P02866: /projects/analysis/analysis30/P02866/merge32550_bwa-mem-0.7.6a-sb/150bp/hg19a/P02866_3_lanes_dupsFlagged.bam
+            normal:
+              P02590: /projects/analysis/analysis30/P02590/HCW32CCXY_8/P02590/150nt/hg19a/bwa-mem-0.7.6a-sb/P02590_1_lane_dupsFlagged.bam
         genome_name: hg19
         output_dir: /projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect/Ploidetect-pipeline-undefined/Ploidetect-undefined
-        temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590
-        # ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone.
-        ploidetect_github_version: undefined
+        temp_dir: /projects/trans_scratch/validations/Ploidetect/POG/POG965/Ploidetect-pipeline-undefined/Ploidetect-undefined/P02866_P02590...
+        # ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
+        ploidetect_ver: undefined
         # Leave ploidetect_local_clone blank or 'None' to download from github
         ploidetect_local_clone: /gsc/pipelines/Ploidetect/undefined
-        use-docker: 0
+        install_ploidetect: 0
         # Reference data.  Selected by 'genome_name' value.
         genome:
           hg19: /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
@@ -259,44 +267,48 @@ def build_config(
 
     prog_str = f'Created by: {realpath(abspath(__file__))} at {datetime.now().strftime("%Y%m%d %H:%M:%S")}'
     yaml_lines.append(f"# {prog_str}")
-    yaml_lines.append(f"id: {patient_id}")
-    yaml_lines.append("libs:")
-    yaml_lines.append(f"{TAB}tumour: {tumour_lib}")
-    yaml_lines.append(f"{TAB}normal: {normal_lib}")
 
     # Find bams
     yaml_lines.append("bams:")
-
+    yaml_lines.append(f"{TAB}{patient_id}:")
     tumour_bam_fn, genome_name = get_bam(tumour_lib)
-    yaml_lines.append(f"{TAB}somatic: {tumour_bam_fn}")
-
     normal_bam_fn, normal_genome_name = get_bam(normal_lib)
-    yaml_lines.append(f"{TAB}normal: {normal_bam_fn}")
+
+    yaml_lines.append(f"{TAB}{TAB}somatic:")
+    yaml_lines.append(f"{TAB}{TAB}{TAB}{tumour_lib}: {tumour_bam_fn}")
+    yaml_lines.append(f"{TAB}{TAB}normal:")
+    yaml_lines.append(f"{TAB}{TAB}{TAB}{normal_lib}: {normal_bam_fn}")
 
     assert genome_name == normal_genome_name
-
     yaml_lines.append(f"genome_name: {genome_reference2genome_name(genome_name)}")
 
     # output_paths
     yaml_lines.append(
         f"output_dir: {get_gsc_output_folder(patient_id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=project)}"
     )
-    yaml_lines.append(
-        f"temp_dir: {get_ploidetect_temp_folder(patient_id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=project)}"
+    temp_dir = get_ploidetect_temp_folder(
+        patient_id,
+        tumour_lib,
+        normal_lib,
+        pipeline_ver,
+        ploidetect_ver,
+        project=project,
     )
+    temp_dir = join(temp_dir, datetime.now().strftime("%Y%m%d_%H%M%S"))
+    yaml_lines.append(f"temp_dir: {temp_dir}")
 
     # Ploidetect installation and versions.
     yaml_lines.append(
-        "# ploidetect_github_version should be a branch or tag.  Overriden by ploidetect_local_clone."
+        "# ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone."
     )
-    yaml_lines.append(f"ploidetect_github_version: {ploidetect_ver}")
+    yaml_lines.append(f"ploidetect_ver: {ploidetect_ver}")
     yaml_lines.append(
         "# Leave ploidetect_local_clone blank or 'None' to download from github"
     )
     yaml_lines.append(
         f"ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}"
     )
-    yaml_lines.append(f"use-docker: {1 if bool(use_docker) else 0}")
+    yaml_lines.append(f"install_ploidetect: {1 if bool(install_ploidetect) else 0}")
 
     # Genomic Reference data
     yaml_lines.append(GENOME_DATA)
@@ -333,13 +345,14 @@ def parse_args():
         help="specify a config filename.",
         default=f"DERIVED_OUTPUT_DIR/{CONFIG_BASENAME}",
     )
+    parser.add_argument("--output_dir", help="Output directory override.")
     parser.add_argument(
         "-p",
         "--project",
         help="Specify a project instead of bioapps lookup by patient_id.",
     )
 
-    parser.add_argument("-d", "--use-docker", help="Set use docker/slurm tag")
+    parser.add_argument("--install_ploidetect", help="Install into local R.")
     parser.add_argument(
         "--version",
         action="version",
@@ -361,20 +374,14 @@ def main(args=None):
     Uses GSC standars patient_id and biopsy or libraries.
     Ploidetect versions must just be manually specified.
     """
+    logger.setLevel(logging.INFO)
+
     args = parse_args() if not args else args
 
     if args.output_file and exists(args.output_file):
         raise ValueError(f"Output config already exists: '{args.output_file}'")
-    config = build_config(
-        patient_id=args.patient_id,
-        biopsy=args.biopsy,
-        tumour_lib=args.tumour_lib,
-        normal_lib=args.normal_lib,
-        pipeline_ver=args.pipeline_ver,
-        ploidetect_ver=args.ploidetect_ver,
-        use_docker=args.use_docker,
-        project=args.project,
-    )
+
+    config = build_config(**vars(args))
 
     if not args.output_file:
         YAML().dump(config, sys.stdout)
@@ -385,7 +392,7 @@ def main(args=None):
         if exists(args.output_file):
             raise ValueError(f"Output config already exists: '{args.output_file}'")
         elif (dirname(args.output_file)) and not exists(dirname(args.output_file)):
-            logging.warning(f"Creating output folder: {dirname(args.output_file)}")
+            logger.warning(f"Creating output folder: {dirname(args.output_file)}")
             os.makedirs(dirname(args.output_file))
         print(f"Writing config to: {abspath(realpath(args.output_file))}")
         YAML().dump(config, open(args.output_file, "w"))

@@ -46,10 +46,12 @@ if(ncol(in_models) == 1){
 #
 # Run ploidetect_cna_sc (subclone aware CNV caller)
 result = ploidetect_cna_sc(all_data = in_rds$all_data, segmented_data = in_rds$segmented_data, tp = in_models$tp[1], ploidy = in_models$ploidy[1], maxpeak=in_rds$maxpeak, verbose = T, max_iters = args$size)
+print(str(result))
+print(names(result))
 # Get the cna plots from result object
 cna_plots = result$cna_plots
 # Get CNV objects from result object
-CN_calls = result$CN_calls
+CN_calls = result$cna_data
 # Open pdf device
 pdf(args$plots)
 # print plots to send them to the pdf device

@@ -5,3 +5,5 @@ dependencies:
  - r-docopt
  - r-data.table
  - r-devtools
+ - r-ggrastr
+ - bioconductor-genomicranges
