@@ -95,6 +95,7 @@ configfile: gsc_config_filename
 # Setting the workdir is less flexible, but should keep logs and parameters organized.
 workdir: output_dir
 
+container: "docker://lculibrk/ploidetect"
 
 rule complete:
     """Copy number data annotated by genes, has been produced."""

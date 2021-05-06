@@ -335,7 +335,9 @@ rule ploidetect_copynumber:
     conda:
         "conda_configs/r.yaml"
     log:
-        "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt",
+        "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt"
+    container:
+        "docker://lculibrk/ploidetect"
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
