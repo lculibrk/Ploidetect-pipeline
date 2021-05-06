@@ -21,6 +21,8 @@ ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}
 # are we using docker?
 install_ploidetect: 0
 
+# sequence type
+sequence_type: "ont"
 # Reference data.  Selected by 'genome_name' value.
 # TODO: standard config should not refer to GSC - sync w/ gsc_build_config.py
 genome:
