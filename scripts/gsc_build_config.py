@@ -12,6 +12,8 @@ from ProjectInfo import BioappsApi
 from ruamel_yaml import YAML
 
 __version__ = "0.0.2"
+
+logger = logging.getLogger(__name__)
 API = BioappsApi()
 CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
 GENOME_DATA = """\
@@ -21,6 +23,11 @@ genome:
         /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
     hg38:
         /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
+annotation:
+    hg19:
+        /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
+    hg38:
+        /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
 array_positions:
     hg19:
         "resources/snp_arrays/hg19/SNP_array_positions.txt"
@@ -50,6 +57,7 @@ chromosomes:
  - 21
  - 22
  - X
+ - Y
 """
 
 
@@ -76,7 +84,7 @@ def get_project_info(patient_id):
     """Return a single project_info dict for the patient."""
     proj_info = API.get_biofx_project_info(patient_id, tumour_char_only=True)
     if len(proj_info) > 1:
-        logging.error(
+        logger.error(
             f"Assuming project: {proj_info[0]['name']}"
             f" - ignoring {[pi['name'] for pi in proj_info[1:]]}"
         )
@@ -166,12 +174,12 @@ def get_bam(library, genome_reference=None):
     for bam in bams_all:
         bam_fns = glob.glob(join(bam["data_path"], "*.bam"))
         if not bam_fns:  # GERO-114 - COLO829 - no bam in path
-            logging.error(f"No bam found in path: {bam['data_path']}")
+            logger.error(f"No bam found in path: {bam['data_path']}")
         else:
             bams.append(bam)
     for bam in bams[1:]:
         warn = f"Ignoring tumour bam {bam['data_path']}"
-        logging.warning(warn)
+        logger.warning(warn)
 
     bam_fns = glob.glob(join(bams[0]["data_path"], "*.bam"))
     assert len(bam_fns) == 1, f"Bam finding error for: '{library}'"
@@ -366,6 +374,8 @@ def main(args=None):
     Uses GSC standars patient_id and biopsy or libraries.
     Ploidetect versions must just be manually specified.
     """
+    logger.setLevel(logging.INFO)
+
     args = parse_args() if not args else args
 
     if args.output_file and exists(args.output_file):
@@ -382,7 +392,7 @@ def main(args=None):
         if exists(args.output_file):
             raise ValueError(f"Output config already exists: '{args.output_file}'")
         elif (dirname(args.output_file)) and not exists(dirname(args.output_file)):
-            logging.warning(f"Creating output folder: {dirname(args.output_file)}")
+            logger.warning(f"Creating output folder: {dirname(args.output_file)}")
             os.makedirs(dirname(args.output_file))
         print(f"Writing config to: {abspath(realpath(args.output_file))}")
         YAML().dump(config, open(args.output_file, "w"))
