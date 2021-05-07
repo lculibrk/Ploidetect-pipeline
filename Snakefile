@@ -272,7 +272,7 @@ rule compute_loh:
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
-        loh=rules.compute_loh.output,
+        loh=rules.compute_loh.output[1],
         window=rules.makewindowfile.output,
     output:
         temp("{temp_dir}/{case}/{somatic}_{normal}/loh.bed"),
