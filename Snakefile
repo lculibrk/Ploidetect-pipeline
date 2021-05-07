@@ -34,7 +34,7 @@ array_positions = (
 
 def nanopore_handling():
     if config["sequence_type"] == "ont":
-        return {"maxd":500, "qual":20}
+        return {"maxd":500, "qual":10}
     else:
         return {"maxd":0,   "qual":50}
 
@@ -272,6 +272,7 @@ rule compute_loh:
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
+        lohdir=rules.compute_loh.output[0],
         loh=rules.compute_loh.output[1],
         window=rules.makewindowfile.output,
     output:
@@ -326,7 +327,7 @@ rule mergedbed:
     container:
         "docker://lculibrk/ploidetect"
     shell:
-        "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
+        "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) | sed 's/chr//g' > {output}"
 
 
 rule preseg:
