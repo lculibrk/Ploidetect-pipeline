@@ -89,10 +89,12 @@ rule germline_cov:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    params:
+        scripts_dir=scripts_dir,
     shell:
         "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
-        " | python3 {scripts_dir}/make_windows.py - 100000"
+        " | python3 {params.scripts_dir}/make_windows.py - 100000"
         " | bedtools sort -i stdin > {output}"
 
 
@@ -197,6 +199,7 @@ rule compute_loh:
     params:
         genome=config["genome"][config["genome_name"]],
         array_positions={array_positions},
+        scripts_dir=scripts_dir,
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -205,7 +208,7 @@ rule compute_loh:
     container:
         "docker://lculibrk/ploidetect"
     shell:
-        "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
+        "bash {params.scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions}"
         " {output.folder}"
 
@@ -224,11 +227,13 @@ rule process_loh:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    params:
+        scripts_dir=scripts_dir,
     shell:
         "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
         " | bedtools sort -i stdin"
-        " | Rscript {scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
+        " | Rscript {params.scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
 
 
 rule getgc:
