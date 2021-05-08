@@ -283,8 +283,8 @@ rule preseg:
         "conda_configs/r.yaml"
     container:
         "docker://lculibrk/ploidetect"
-    shell:
-        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
+    script:
+        "scripts/prep_ploidetect2.R -i {input} -o {output}"
 
 
 rule ploidetect:
