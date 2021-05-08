@@ -300,10 +300,14 @@ rule preseg:
 rule ploidetect:
     """Runs Ploidetect"""
     input:
-        rules.preseg.output,
-        rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
-            "install_ploidetect"
-        ] else __file__,
+        preseg=rules.preseg.output,
+        install=(
+            rules.ploidetect_install.output
+            if not workflow.use_singularity
+            and "install_ploidetect" in config.keys()
+            and config["install_ploidetect"]
+            else __file__
+        ),
     output:
         plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
         models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
@@ -317,7 +321,7 @@ rule ploidetect:
         "docker://lculibrk/ploidetect"
     shell:
         "Rscript {scripts_dir}/run_ploidetect2.R "
-        " -i {input[0]} "
+        " -i {input.preseg} "
         " -o {output.models} -p {output.plots} -r {output.meta}"
 
 
