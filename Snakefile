@@ -202,8 +202,8 @@ rule compute_loh:
         sombam=lambda w: config["bams"][w.case]["somatic"][w.somatic],
         normbam=lambda w: config["bams"][w.case]["normal"][w.normal],
     output:
-        temp(directory("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/")),
-        temp("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt"),
+        folder=temp(directory("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/")),
+        loh=temp("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt"),
     params:
         genome=config["genome"][config["genome_name"]],
         array_positions={array_positions},
@@ -217,13 +217,13 @@ rule compute_loh:
     shell:
         "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions}"
-        " {output[0]}"
+        " {output.folder}"
 
 
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
-        loh=rules.compute_loh.output[1],
+        loh=rules.compute_loh.output.loh,
         window=rules.makewindowfile.output,
     output:
         temp("{temp_dir}/{case}/{somatic}_{normal}/loh.bed"),
