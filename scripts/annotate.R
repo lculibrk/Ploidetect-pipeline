@@ -1,6 +1,7 @@
+#! /usr/bin/env Rscript
 ' annotate.R
 
-Usage: 
+Usage:
 annotate.R -i cna_condensed.txt -a annotations.gtf -o output.bed
 
 Options:

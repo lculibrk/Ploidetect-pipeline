@@ -27,9 +27,9 @@ Use --config options such as:
     project: (optional) specify project
 
 Examples:
-    Snakefile.gsc.smk --config id=POG965 biopsy=biop2
+    snakemake -n -s Snakefile.gsc.smk --config id=POG965 biopsy=biop2
 
-    Snakefile.gsc.smk --config id=COLO829-TestA tumour_lib=A36971 normal_lib=A36973 project=POG
+    snakemake -n -s Snakefile.gsc.smk --config id=COLO829-TestA tumour_lib=A36971 normal_lib=A36973 project=POG
 """
 if "id" in config.keys() and (
     ("biopsy" in config.keys())
@@ -117,8 +117,8 @@ rule annotate_genes:
         f"{output_dir}/cna_genes.log",
     conda:
         "conda_configs/r.yaml"
-    shell:
-        "Rscript {scripts_dir}/annotate.R -i {input.cna} -a {input.gtf} -o {output}"
+    script:
+        "scripts/annotate.R -i {input.cna} -a {input.gtf} -o {output}"
 
 
 module ploidetect:
@@ -129,3 +129,6 @@ module ploidetect:
 
 
 use rule * from ploidetect
+
+
+print(f"Snakefile.gsc.smk target: {rules.complete.input}")
