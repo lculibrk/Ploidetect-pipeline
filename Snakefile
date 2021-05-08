@@ -309,8 +309,8 @@ rule ploidetect:
         mem_mb=24 * MEM_PER_CPU,
     container:
         "docker://lculibrk/ploidetect"
-    shell:
-        "Rscript {scripts_dir}/run_ploidetect2.R "
+    script:
+        "scripts/run_ploidetect2.R "
         " -i {input.preseg} "
         " -o {output.models} -p {output.plots} -r {output.meta}"
 
