@@ -32,26 +32,18 @@ array_positions = (
 )
 
 
-## Parse sample information
-bams_dict = config["bams"]
-sample_ids = bams_dict.keys()
-
-## Here comes the for loop
-## Initialize output list, which will be fed to rule all
-output_list = []
-## Loop over the bams and construct lib comparisons
-for sample in sample_ids:
-    somatics = bams_dict[sample]["somatic"].keys()
-    normals = bams_dict[sample]["normal"].keys()
-    combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
-    outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
-    output_list.extend(outs)
-print(f"Final outputs: {output_list}")
-
-
 rule all:
     input:
-        output_list,
+        [
+            expand(
+                "{output_dir}/{sample}/{somatic}_{normal}/cna.txt",
+                output_dir=output_dir,
+                sample=sample,
+                somatic=config["bams"][sample]["somatic"].keys(),
+                normal=config["bams"][sample]["normal"].keys(),
+            )
+            for sample in config["bams"].keys()
+        ],
 
 
 def devtools_install():
