@@ -272,8 +272,10 @@ rule mergedbed:
 
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
+    params:
+        temp_dir=temp_dir,
     input:
-        "{temp_dir}/{case}/{somatic}_{normal}/merged.bed",
+        "{parms.temp_dir}/{case}/{somatic}_{normal}/merged.bed",
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
     resources:
