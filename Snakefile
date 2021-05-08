@@ -277,12 +277,33 @@ rule mergedbed:
 
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
-    params:
-        temp_dir=temp_dir,
+    # Use explict params to connect temp_dir and output_dir wildcards
     input:
-        "{params.temp_dir}/{case}/{somatic}_{normal}/merged.bed",
+        #       "{temp_dir}/{case}/{somatic}_{normal}/merged.bed",
+        [
+            expand(
+                "{temp_dir}/{sample}/{somatic}_{normal}/merged.bed",
+                output_dir=output_dir,
+                sample=sample,
+                somatic=config["bams"][sample]["somatic"].keys(),
+                normal=config["bams"][sample]["normal"].keys(),
+                temp_dir=temp_dir,
+            )
+            for sample in config["bams"].keys()
+        ],
     output:
-        temp("{output_dir}/{case}/{somatic}_{normal}/segmented.RDS"),
+        #       "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
+        [
+            expand(
+                "{output_dir}/{sample}/{somatic}_{normal}/segmented.RDS",
+                output_dir=output_dir,
+                sample=sample,
+                somatic=config["bams"][sample]["somatic"].keys(),
+                normal=config["bams"][sample]["normal"].keys(),
+                temp_dir=temp_dir,
+            )
+            for sample in config["bams"].keys()
+        ],
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
