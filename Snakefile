@@ -194,7 +194,7 @@ rule compute_loh:
         sombam=lambda w: config["bams"][w.case]["somatic"][w.somatic],
         normbam=lambda w: config["bams"][w.case]["normal"][w.normal],
     output:
-        folder=temp(directory("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/")),
+        folder=directory("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp"),
         loh=temp("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt"),
     params:
         genome=config["genome"][config["genome_name"]],
@@ -280,9 +280,9 @@ rule preseg:
     params:
         temp_dir=temp_dir,
     input:
-        "{parms.temp_dir}/{case}/{somatic}_{normal}/merged.bed",
+        "{params.temp_dir}/{case}/{somatic}_{normal}/merged.bed",
     output:
-        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
+        temp("{output_dir}/{case}/{somatic}_{normal}/segmented.RDS"),
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
