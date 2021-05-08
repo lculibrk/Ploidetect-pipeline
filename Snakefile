@@ -324,13 +324,13 @@ rule ploidetect:
 rule ploidetect_copynumber:
     """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
     input:
-        "{output_dir}/{case}/{somatic}_{normal}/models.txt",
-        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
-        "{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
+        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
+        segs="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
+        ploidetect_plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
     output:
-        "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
-        "{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
-        "{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
+        cna="{output_dir}/{case}/{somatic}_{normal}/cna.txt",
+        cna_plots="{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
+        cna_cond="{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
     conda:
         "conda_configs/r.yaml"
     log:
@@ -341,4 +341,4 @@ rule ploidetect_copynumber:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
     shell:
-        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
+        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input.segs} -m {input.models} -p {output.cna_plots} -o {output.cna} &> {log}"
