@@ -12,7 +12,6 @@ print(f"Ploidetect-pipeline {VERSION}")
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
 
-
 MEM_PER_CPU = 7900
 
 chromosomes = config["chromosomes"]
@@ -335,7 +334,7 @@ rule ploidetect_copynumber:
     conda:
         "conda_configs/r.yaml"
     log:
-        "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt"
+        "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt",
     container:
         "docker://lculibrk/ploidetect"
     resources:

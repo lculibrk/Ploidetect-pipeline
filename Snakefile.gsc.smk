@@ -89,13 +89,16 @@ if not os.path.exists(gsc_config_filename):
 print(f"config: {os.path.abspath(gsc_config_filename)}")
 config = dict()  # Remove any existing values
 
+
 configfile: gsc_config_filename
 
 
 # Setting the workdir is less flexible, but should keep logs and parameters organized.
 workdir: output_dir
 
+
 container: "docker://lculibrk/ploidetect"
+
 
 rule complete:
     """Copy number data annotated by genes, has been produced."""
@@ -116,6 +119,7 @@ rule annotate_genes:
         "conda_configs/r.yaml"
     shell:
         "Rscript {scripts_dir}/annotate.R -i {input.cna} -a {input.gtf} -o {output}"
+
 
 module ploidetect:
     snakefile:
