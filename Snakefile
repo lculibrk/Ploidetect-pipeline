@@ -19,8 +19,6 @@ output_dir = config["output_dir"]
 if "temp_dir" not in config or not config["temp_dir"]:
     config["temp_dir"] = f"{output_dir}/temp"
 temp_dir = config["temp_dir"]
-if temp_dir[-1] != "/":
-    temp_dir += "/"  # Prevents strange case wild-card error.
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")
 array_positions = (
@@ -336,5 +334,5 @@ rule ploidetect_copynumber:
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
-    shell:
-        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input.segs} -m {input.models} -p {output.cna_plots} -o {output.cna} &> {log}"
+    script:
+        "scripts/ploidetect_copynumber.R -i {input.segs} -m {input.models} -p {output.cna_plots} -o {output.cna} &> {log}"
