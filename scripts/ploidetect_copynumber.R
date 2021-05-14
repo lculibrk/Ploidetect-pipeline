@@ -35,7 +35,7 @@ args = docopt(doc)
 in_rds = readRDS(args$input)
 #
 # Read purity/ploidy models
-in_models = read.table(file = args$models, sep = " ", stringsAsFactors=F, header = T)
+in_models = read.table(file = args$models, sep = "\t", stringsAsFactors=F, header = T)
 #
 # Load centromere positions packaged with Ploidetect
 data(centromeres)
