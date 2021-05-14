@@ -1,3 +1,4 @@
+#! /usr/bin/env Rscript
 # prep_ploidetect2.R
 #
 # preprocesses input .bed file into an .RDS containing aggregated, pre-segmented data
@@ -5,14 +6,14 @@
 # docopt script docstring
 ' prep_ploidetect2.R
 
-Usage: 
+Usage:
 prep_ploidetect2.R -i input -o output.txt
 
 Options:
 -i --input input      input .bed data file
 -o --output output    output file
 ' -> doc
-# 
+#
 # load libraries
 library(docopt)
 library(devtools)

@@ -17,19 +17,20 @@ from gsc_build_config import main as build_config
 
 USAGE = """\
 Run Ploidetect-pipeline with GSC sample setup helpers.
+Create a config, if it does not yet exist.
 
 Use --config options such as:
     id: (required)
-    biopsy: eg biop2 - optional - find libraries
-    tumour_lib:
-    normal_lib:
+    biopsy: eg 'biop2' (optional) - find libraries tumour_lib & normal_lib by bioapps_api.
+    tumour_lib: Required if no biopsy given for bioapps lookup.
+    normal_lib:  Required if no biopsy given for bioapps lookup.
     gsc_config_filename: (optional) specify output config filename
     project: (optional) specify project
 
 Examples:
-    Snakefile.gsc.smk --config id=POG965 biopsy=biop2
+    snakemake -n -s Snakefile.gsc.smk --config id=POG965 biopsy=biop2
 
-    Snakefile.gsc.smk --config id=COLO829-TestA tumour_lib=A36971 normal_lib=A36973 project=POG
+    snakemake -n -s Snakefile.gsc.smk --config id=COLO829-TestA tumour_lib=A36971 normal_lib=A36973 project=POG
 """
 if "id" in config.keys() and (
     ("biopsy" in config.keys())
@@ -53,10 +54,11 @@ normal = config["normal_lib"]
 output_dir = config["output_dir"] if "output_dir" in config.keys() else ""
 
 
-# Load default config values.
+# Load default values for references / annotations, etc.
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
 
+# If no output_dir given, use properties of GSC bioapps_api for standard project output location.
 output_dir = (
     output_dir
     if output_dir
@@ -89,13 +91,28 @@ if not os.path.exists(gsc_config_filename):
 print(f"config: {os.path.abspath(gsc_config_filename)}")
 config = dict()  # Remove any existing values
 
+
 configfile: gsc_config_filename
+
+
+# GSC specific - set scratch subfolder as a symlink.
+#   A symlink to trans_scratch prevents the project directory from snapshot
+#   backups of large temporary files.
+scratch = f"{output_dir}/scratch"
+if config["temp_dir"] and not os.path.exists(scratch):
+    print(f'Creating scratch space:  {config["temp_dir"]}')
+    os.makedirs(config["temp_dir"])
+if config["temp_dir"] and not os.path.islink(scratch) and not os.path.exists(scratch):
+    print(f"Creating symlink: {scratch}")
+    os.symlink(config["temp_dir"], scratch)
 
 
 # Setting the workdir is less flexible, but should keep logs and parameters organized.
 workdir: output_dir
 
+
 container: "docker://lculibrk/ploidetect"
+
 
 rule complete:
     """Copy number data annotated by genes, has been produced."""
@@ -114,8 +131,11 @@ rule annotate_genes:
         f"{output_dir}/cna_genes.log",
     conda:
         "conda_configs/r.yaml"
+    params:
+        scripts_dir=scripts_dir,
     shell:
-        "Rscript {scripts_dir}/annotate.R -i {input.cna} -a {input.gtf} -o {output}"
+        "Rscript {params.scripts_dir}/annotate.R -i {input.cna} -a {input.gtf} -o {output}"
+
 
 module ploidetect:
     snakefile:
@@ -125,3 +145,6 @@ module ploidetect:
 
 
 use rule * from ploidetect
+
+
+print(f"Snakefile.gsc.smk target: {rules.complete.input}")

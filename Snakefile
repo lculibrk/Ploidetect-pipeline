@@ -12,16 +12,10 @@ print(f"Ploidetect-pipeline {VERSION}")
 configfile: os.path.join(workflow.basedir, "CONFIG.txt")
 
 
-
 MEM_PER_CPU = 7900
 
 chromosomes = config["chromosomes"]
 output_dir = config["output_dir"]
-if "temp_dir" not in config or not config["temp_dir"]:
-    config["temp_dir"] = f"{output_dir}/temp"
-temp_dir = config["temp_dir"]
-if temp_dir[-1] != "/":
-    temp_dir += "/"  # Prevents strange case wild-card error.
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")
 array_positions = (
@@ -33,26 +27,18 @@ array_positions = (
 )
 
 
-## Parse sample information
-bams_dict = config["bams"]
-sample_ids = bams_dict.keys()
-
-## Here comes the for loop
-## Initialize output list, which will be fed to rule all
-output_list = []
-## Loop over the bams and construct lib comparisons
-for sample in sample_ids:
-    somatics = bams_dict[sample]["somatic"].keys()
-    normals = bams_dict[sample]["normal"].keys()
-    combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
-    outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
-    output_list.extend(outs)
-print(f"Final outputs: {output_list}")
-
-
 rule all:
     input:
-        output_list,
+        [
+            expand(
+                "{output_dir}/{sample}/{somatic}_{normal}/cna.txt",
+                output_dir=output_dir,
+                sample=sample,
+                somatic=config["bams"][sample]["somatic"].keys(),
+                normal=config["bams"][sample]["normal"].keys(),
+            )
+            for sample in config["bams"].keys()
+        ],
 
 
 def devtools_install():
@@ -92,7 +78,7 @@ rule germline_cov:
     input:
         bam=lambda w: config["bams"][w.case]["normal"][w.lib],
     output:
-        temp("{temp_dir}/{case}/{lib}/normal/{chr}.bed"),
+        temp("{output_dir}/scratch/{case}/{lib}/normal/{chr}.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -100,19 +86,24 @@ rule germline_cov:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    params:
+        scripts_dir=scripts_dir,
     shell:
         "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
-        " | python3 {scripts_dir}/make_windows.py - 100000"
+        " | python3 {params.scripts_dir}/make_windows.py - 100000"
         " | bedtools sort -i stdin > {output}"
 
 
 rule merge_germline:
     """Merge multi-chromosome output from germline_cov into single file"""
     input:
-        expand("{{temp_dir}}/{{case}}/{{normal}}/normal/{chr}.bed", chr=chromosomes),
+        expand(
+            "{{output_dir}}/scratch/{{case}}/{{normal}}/normal/{chr}.bed",
+            chr=chromosomes,
+        ),
     output:
-        temp("{temp_dir}/{case}/{normal}/germline.bed"),
+        temp("{output_dir}/scratch/{case}/{normal}/germline.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -129,7 +120,7 @@ rule makewindowfile:
     input:
         rules.merge_germline.output,
     output:
-        temp("{temp_dir}/{case}/{normal}/windows.txt"),
+        temp("{output_dir}/scratch/{case}/{normal}/windows.txt"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -146,7 +137,7 @@ rule splitwindowfile:
     input:
         rules.makewindowfile.output,
     output:
-        temp("{temp_dir}/{case}/{normal}/windows/{chr}.txt"),
+        temp("{output_dir}/scratch/{case}/{normal}/windows/{chr}.txt"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -165,7 +156,7 @@ rule genomecovsomatic:
         nombam=lambda w: config["bams"][w.case]["normal"][w.normal],
         window=rules.splitwindowfile.output,
     output:
-        temp("{temp_dir}/{case}/{somatic}_{normal}/tumour/{chr}.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour/{chr}.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -181,11 +172,11 @@ rule mergesomatic:
     """Merge output of genomecovsomatic to a singular file"""
     input:
         expand(
-            "{{temp_dir}}/{{case}}/{{somatic}}_{{normal}}/tumour/{chr}.bed",
+            "{{output_dir}}/scratch/{{case}}/{{somatic}}_{{normal}}/tumour/{chr}.bed",
             chr=chromosomes,
         ),
     output:
-        temp("{temp_dir}/{case}/{somatic}_{normal}/tumour.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -203,11 +194,12 @@ rule compute_loh:
         sombam=lambda w: config["bams"][w.case]["somatic"][w.somatic],
         normbam=lambda w: config["bams"][w.case]["normal"][w.normal],
     output:
-        temp(directory("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/")),
-        temp("{temp_dir}/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt"),
+        folder=directory("{output_dir}/scratch/{case}/{somatic}_{normal}/loh_tmp"),
+        loh=temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt"),
     params:
         genome=config["genome"][config["genome_name"]],
         array_positions={array_positions},
+        scripts_dir=scripts_dir,
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -216,18 +208,18 @@ rule compute_loh:
     container:
         "docker://lculibrk/ploidetect"
     shell:
-        "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
+        "bash {params.scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions}"
-        " {output[0]}"
+        " {output.folder}"
 
 
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
-        loh=rules.compute_loh.output[1],
+        loh=rules.compute_loh.output.loh,
         window=rules.makewindowfile.output,
     output:
-        temp("{temp_dir}/{case}/{somatic}_{normal}/loh.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -235,11 +227,13 @@ rule process_loh:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    params:
+        scripts_dir=scripts_dir,
     shell:
         "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
         " | bedtools sort -i stdin"
-        " | Rscript {scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
+        " | Rscript {params.scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
 
 
 rule getgc:
@@ -247,7 +241,7 @@ rule getgc:
     input:
         window=rules.makewindowfile.output,
     output:
-        temp("{temp_dir}/{case}/{somatic}_{normal}/gc.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/gc.bed"),
     params:
         genome=config["genome"][config["genome_name"]],
     resources:
@@ -269,7 +263,7 @@ rule mergedbed:
         normal=rules.merge_germline.output,
         loh=rules.process_loh.output,
     output:
-        temp("{temp_dir}/{case}/{somatic}_{normal}/merged.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -284,7 +278,7 @@ rule mergedbed:
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
-        temp_dir + "{case}/{somatic}_{normal}/merged.bed",
+        "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
     resources:
@@ -294,17 +288,23 @@ rule preseg:
         "conda_configs/r.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    params:
+        scripts_dir=scripts_dir,
     shell:
-        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
+        "Rscript {params.scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
 
 
 rule ploidetect:
     """Runs Ploidetect"""
     input:
-        rules.preseg.output,
-        rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
-            "install_ploidetect"
-        ] else __file__,
+        preseg=rules.preseg.output,
+        install=(
+            rules.ploidetect_install.output
+            if not workflow.use_singularity
+            and "install_ploidetect" in config.keys()
+            and config["install_ploidetect"]
+            else __file__
+        ),
     output:
         plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
         models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
@@ -316,30 +316,34 @@ rule ploidetect:
         mem_mb=24 * MEM_PER_CPU,
     container:
         "docker://lculibrk/ploidetect"
+    params:
+        scripts_dir=scripts_dir,
     shell:
-        "Rscript {scripts_dir}/run_ploidetect2.R "
-        " -i {input[0]} "
+        "Rscript {params.scripts_dir}/run_ploidetect2.R "
+        " -i {input.preseg} "
         " -o {output.models} -p {output.plots} -r {output.meta}"
 
 
 rule ploidetect_copynumber:
     """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
     input:
-        "{output_dir}/{case}/{somatic}_{normal}/models.txt",
-        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
-        "{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
+        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
+        segs="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
+        ploidetect_plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
     output:
-        "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
-        "{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
-        "{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
+        cna="{output_dir}/{case}/{somatic}_{normal}/cna.txt",
+        cna_plots="{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
+        cna_cond="{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
     conda:
         "conda_configs/r.yaml"
     log:
-        "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt"
+        "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt",
     container:
         "docker://lculibrk/ploidetect"
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
+    params:
+        scripts_dir=scripts_dir,
     shell:
-        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
+        "Rscript {params.scripts_dir}/ploidetect_copynumber.R -i {input.segs} -m {input.models} -p {output.cna_plots} -o {output.cna} &> {log}"

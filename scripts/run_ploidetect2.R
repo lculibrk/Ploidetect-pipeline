@@ -1,15 +1,16 @@
+#! /usr/bin/env Rscript
 # run_ploidetect2.R
 #
 # runs Ploidetect's tumor purity and ploidy caller on preprocessed output
 #
 # Takes input .RDS from prep_ploidetect2.R and performs tumor purity and ploidy
-# calling. Outputs a tab-separated file containing purity/ploidy models and a 
+# calling. Outputs a tab-separated file containing purity/ploidy models and a
 # pdf containing a plot of the data distribution and a plot for each model
 #
 # docopt script docstring
 ' run_ploidetect2.R
 
-Usage: 
+Usage:
 run_ploidetect2.R -i input -p plots.pdf -r rds.rds -o output.txt
 
 Options:
