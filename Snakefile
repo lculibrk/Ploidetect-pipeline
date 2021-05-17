@@ -334,6 +334,9 @@ rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
         temp_dir + "{case}/{somatic}_{normal}/merged.bed",
+        rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
+            "install_ploidetect"
+        ] else __file__,
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
     resources:
@@ -351,9 +354,6 @@ rule ploidetect:
     """Runs Ploidetect"""
     input:
         rules.preseg.output,
-        rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
-            "install_ploidetect"
-        ] else __file__,
     output:
         plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
         models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
