@@ -347,7 +347,7 @@ rule preseg:
     container:
         "docker://lculibrk/ploidetect"
     shell:
-        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
+        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -o {output}"
 
 
 rule ploidetect:
