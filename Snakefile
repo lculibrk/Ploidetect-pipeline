@@ -31,13 +31,13 @@ rule all:
     input:
         [
             expand(
-                "{output_dir}/{sample}/{somatic}_{normal}/cna.txt",
+                "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
                 output_dir=output_dir,
-                sample=sample,
-                somatic=config["bams"][sample]["somatic"].keys(),
-                normal=config["bams"][sample]["normal"].keys(),
+                case=case,
+                somatic=config["bams"][case]["somatic"].keys(),
+                normal=config["bams"][case]["normal"].keys(),
             )
-            for sample in config["bams"].keys()
+            for case in config["bams"].keys()
         ],
 
 
