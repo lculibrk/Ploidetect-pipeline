@@ -76,9 +76,9 @@ rule ploidetect_install:
 rule germline_cov:
     """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins"""
     input:
-        bam=lambda w: config["bams"][w.case]["normal"][w.lib],
+        bam=lambda w: config["bams"][w.case]["normal"][w.normal],
     output:
-        temp("{output_dir}/scratch/{case}/{lib}/normal/{chr}.bed"),
+        temp("{output_dir}/scratch/{case}/{normal}/normal/{chr}.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -89,7 +89,7 @@ rule germline_cov:
     params:
         scripts_dir=scripts_dir,
     log:
-        "{output_dir}/logs/germline_cov.{case}.{lib}.{chr}.log",
+        "{output_dir}/logs/germline_cov.{case}.{normal}.{chr}.log",
     shell:
         "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
