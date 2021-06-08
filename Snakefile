@@ -44,11 +44,11 @@ rule all:
 def devtools_install():
     if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
         install_path = config["ploidetect_local_clone"].format(**config)
-        devtools_cmd = "\"devtools::install_local('" + install_path + "')\""
+        devtools_cmd = f"devtools::install_local('{install_path}')"
     else:
-        devtools_cmd = "\"devtools::install_github('lculibrk/Ploidetect', "
-        devtools_cmd += "ref = '" + config["ploidetect_ver"] + "')\""
-    return devtools_cmd
+        ver = config["ploidetect_ver"]
+        devtools_cmd = f"devtools::install_github('lculibrk/Ploidetect', ref = '{ver}')"
+    return f'"{devtools_cmd}"'
 
 
 rule ploidetect_install:
