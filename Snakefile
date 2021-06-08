@@ -88,6 +88,8 @@ rule germline_cov:
         "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
+    log:
+        "{output_dir}/logs/germline_cov.{case}.{lib}.{chr}.log",
     shell:
         "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
@@ -111,6 +113,8 @@ rule merge_germline:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/merge_germline.{case}.{normal}.log",
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
 
@@ -128,6 +132,8 @@ rule makewindowfile:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/makewindowfile.{case}.{normal}.log",
     shell:
         "cut -f 1,2,3 < {input} | bedtools sort -i stdin > {output}"
 
@@ -145,6 +151,8 @@ rule splitwindowfile:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/splitwindowfile.{case}.{normal}.{chr}.log",
     shell:
         "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
 
@@ -164,6 +172,8 @@ rule genomecovsomatic:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/genomecovsomatic.{case}.{somatic}_{normal}.{chr}.log",
     shell:
         "bedtools multicov -bams {input.sombam} {input.nombam} -q 20 -bed {input.window}  > {output}"
 
@@ -184,6 +194,8 @@ rule mergesomatic:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/mergesomatic.{case}.{somatic}_{normal}.log",
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
 
@@ -207,6 +219,8 @@ rule compute_loh:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/compute_loh.{case}.{somatic}_{normal}.log",
     shell:
         "bash {params.scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions}"
@@ -229,6 +243,8 @@ rule process_loh:
         "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
+    log:
+        "{output_dir}/logs/process_loh.{case}.{somatic}_{normal}.log",
     shell:
         "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
@@ -251,6 +267,8 @@ rule getgc:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/getgc.{case}.{somatic}_{normal}.log",
     shell:
         "bedtools nuc -fi {params.genome} -bed {input} | cut -f1,2,3,5 | tail -n +2 > {output}"
 
@@ -271,6 +289,8 @@ rule mergedbed:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
     shell:
         "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
 
@@ -290,6 +310,8 @@ rule preseg:
         "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
+    log:
+        "{output_dir}/logs/preseg.{case}.{somatic}_{normal}.log",
     shell:
         "Rscript {params.scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
 
@@ -318,6 +340,8 @@ rule ploidetect:
         "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
+    log:
+        "{output_dir}/logs/ploidetect.{case}.{somatic}_{normal}.log",
     shell:
         "Rscript {params.scripts_dir}/run_ploidetect2.R "
         " -i {input.preseg} "
@@ -336,8 +360,6 @@ rule ploidetect_copynumber:
         cna_cond="{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
     conda:
         "conda_configs/r.yaml"
-    log:
-        "{output_dir}/{case}/{somatic}_{normal}/cna_log.txt",
     container:
         "docker://lculibrk/ploidetect"
     resources:
@@ -345,5 +367,7 @@ rule ploidetect_copynumber:
         mem_mb=24 * MEM_PER_CPU,
     params:
         scripts_dir=scripts_dir,
+    log:
+        "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
     shell:
         "Rscript {params.scripts_dir}/ploidetect_copynumber.R -i {input.segs} -m {input.models} -p {output.cna_plots} -o {output.cna} &> {log}"
