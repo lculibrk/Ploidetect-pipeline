@@ -44,7 +44,7 @@ rule all:
 def devtools_install():
     if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
         install_path = config["ploidetect_local_clone"].format(**config)
-        devtools_cmd = f"devtools::install_local('{install_path}')"
+        devtools_cmd = f"devtools::install_local('{install_path}', force = TRUE)"
     else:
         ver = config["ploidetect_ver"]
         devtools_cmd = f"devtools::install_github('lculibrk/Ploidetect', ref = '{ver}')"
@@ -91,10 +91,11 @@ rule germline_cov:
     log:
         "{output_dir}/logs/germline_cov.{case}.{normal}.{chr}.log",
     shell:
-        "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
+        "samtools depth -r{wildcards.chr} -Q 21 {input.bam} 2>> {log}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
-        " | python3 {params.scripts_dir}/make_windows.py - 100000"
-        " | bedtools sort -i stdin > {output}"
+        " | python3 {params.scripts_dir}/make_windows.py - 100000 2>> {log}"
+        " | bedtools sort -i stdin > {output}  2>> {log}"
+        " && ls -l {output} >> {log}"
 
 
 rule merge_germline:
@@ -116,7 +117,9 @@ rule merge_germline:
     log:
         "{output_dir}/logs/merge_germline.{case}.{normal}.log",
     shell:
+        "ls -l {input} >> {log};"
         "cat {input} | bedtools sort -i stdin > {output}"
+        " 2>> {log}"
 
 
 rule makewindowfile:
@@ -136,6 +139,8 @@ rule makewindowfile:
         "{output_dir}/logs/makewindowfile.{case}.{normal}.log",
     shell:
         "cut -f 1,2,3 < {input} | bedtools sort -i stdin > {output}"
+        " 2> {log}"
+        " && ls -l {output} >> {log}"
 
 
 rule splitwindowfile:
@@ -155,6 +160,8 @@ rule splitwindowfile:
         "{output_dir}/logs/splitwindowfile.{case}.{normal}.{chr}.log",
     shell:
         "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
+        " 2> {log}"
+        " && ls -l {output} >> {log}"
 
 
 rule genomecovsomatic:
@@ -176,6 +183,8 @@ rule genomecovsomatic:
         "{output_dir}/logs/genomecovsomatic.{case}.{somatic}_{normal}.{chr}.log",
     shell:
         "bedtools multicov -bams {input.sombam} {input.nombam} -q 20 -bed {input.window}  > {output}"
+        " 2> {log}"
+        " && ls -l {output} >> {log}"
 
 
 rule mergesomatic:
@@ -198,6 +207,8 @@ rule mergesomatic:
         "{output_dir}/logs/mergesomatic.{case}.{somatic}_{normal}.log",
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
+        " 2> {log}"
+        " && ls -l {output} >> {log}"
 
 
 rule compute_loh:
@@ -225,6 +236,7 @@ rule compute_loh:
         "bash {params.scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions}"
         " {output.folder}"
+        " &> {log}"
 
 
 rule process_loh:
@@ -250,6 +262,8 @@ rule process_loh:
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
         " | bedtools sort -i stdin"
         " | Rscript {params.scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
+        " 2> {log}"
+        " && ls -l {output} >> {log}"
 
 
 rule getgc:
@@ -271,6 +285,8 @@ rule getgc:
         "{output_dir}/logs/getgc.{case}.{somatic}_{normal}.log",
     shell:
         "bedtools nuc -fi {params.genome} -bed {input} | cut -f1,2,3,5 | tail -n +2 > {output}"
+        " 2> {log}"
+        " && ls -l {output} >> {log}"
 
 
 rule mergedbed:
@@ -293,6 +309,8 @@ rule mergedbed:
         "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
     shell:
         "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
+        " 2> {log}"
+        " && ls -l {output} >> {log}"
 
 
 rule preseg:
@@ -313,7 +331,7 @@ rule preseg:
     log:
         "{output_dir}/logs/preseg.{case}.{somatic}_{normal}.log",
     shell:
-        "Rscript {params.scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
+        "Rscript {params.scripts_dir}/prep_ploidetect2.R -i {input} -o {output} &> {log}"
 
 
 rule ploidetect:
@@ -346,6 +364,7 @@ rule ploidetect:
         "Rscript {params.scripts_dir}/run_ploidetect2.R "
         " -i {input.preseg} "
         " -o {output.models} -p {output.plots} -r {output.meta}"
+        " &> {log}"
 
 
 rule ploidetect_copynumber:
@@ -370,4 +389,7 @@ rule ploidetect_copynumber:
     log:
         "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
     shell:
-        "Rscript {params.scripts_dir}/ploidetect_copynumber.R -i {input.segs} -m {input.models} -p {output.cna_plots} -o {output.cna} &> {log}"
+        "Rscript {params.scripts_dir}/ploidetect_copynumber.R"
+        " -i {input.segs} -m {input.models}"
+        " -p {output.cna_plots} -o {output.cna}"
+        " &> {log}"
