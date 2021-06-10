@@ -29,6 +29,7 @@ args = docopt(doc)
 #
 # show the script call as run
 print(paste0("run_ploidetect2.R -i ", args$input, " -p ", args$plots, " -r ", args$rds, " -o ", args$output))
+print(paste0("Running Ploidetect version: ", packageVersion("Ploidetect")))
 #
 # Read input data .RDS file
 in_list = readRDS(args$input)
