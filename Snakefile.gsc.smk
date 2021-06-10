@@ -24,6 +24,7 @@ Use --config options such as:
     biopsy: eg 'biop2' (optional) - find libraries tumour_lib & normal_lib by bioapps_api.
     tumour_lib: Required if no biopsy given for bioapps lookup.
     normal_lib:  Required if no biopsy given for bioapps lookup.
+    genome_reference: (optional) - force hg19 or hg38 bam (ignore 'tumour_char' status)
     gsc_config_filename: (optional) specify output config filename
     project: (optional) specify project
 
@@ -38,7 +39,7 @@ if "id" in config.keys() and (
 ):
     print("Running GSC build")
 else:
-    print("No GSC specific config to create.")
+    print("Either a biopsy or tumour_lib/normal_lib pair required.")
     print(USAGE)
     sys.exit()
 
@@ -49,6 +50,9 @@ if "biopsy" in config.keys():
 case = config["id"]
 somatic = config["tumour_lib"]
 normal = config["normal_lib"]
+genome_reference = (
+    config["genome_reference"] if "genome_reference" in config.keys() else None
+)
 
 # Current output_dir value, before loading any defaults.
 output_dir = config["output_dir"] if "output_dir" in config.keys() else ""
@@ -86,6 +90,7 @@ if not os.path.exists(gsc_config_filename):
     args.pipeline_ver = pipeline_ver
     args.output_file = gsc_config_filename
     args.patient_id = args.id
+    args.genome_reference = genome_reference
     build_config(args=args)
 
 # Run the standard Snakemake pipeline with the appropriate config

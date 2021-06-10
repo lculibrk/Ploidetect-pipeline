@@ -135,9 +135,12 @@ def get_bam(library, genome_reference=None):
 
     Returns (library, genome_reference)
     """
-    bams_all = API.get_bam_info_from_library(library)
+    bams_all = API.get_bam_info_from_library(library, reference=genome_reference)
     if genome_reference:
-        bams_all = [bd for bd in bams_all if bd["genome_reference"] == genome_reference]
+        bams_all = [
+            bd for bd in bams_all if bd["genome_reference"].startswith(genome_reference)
+        ]
+
     bams = []
     for bam in bams_all:
         bam_fns = glob.glob(join(bam["data_path"], "*.bam"))
@@ -145,12 +148,16 @@ def get_bam(library, genome_reference=None):
             logger.error(f"No bam found in path: {bam['data_path']}")
         else:
             bams.append(bam)
+
+    assert bams, f"Bam finding error for: '{library}' (ref: {genome_reference})"
+
+    bams.sort(key=lambda x: x["tumour_char"], reverse=True)
     for bam in bams[1:]:
         warn = f"Ignoring tumour bam {bam['data_path']}"
         logger.warning(warn)
 
     bam_fns = glob.glob(join(bams[0]["data_path"], "*.bam"))
-    assert len(bam_fns) == 1, f"Bam finding error for: '{library}'"
+    assert len(bam_fns) == 1, f"Bam finding error for: '{library}' (ref: {genome_reference})"
     return (bam_fns[0], bams[0]["genome_reference"])
 
 
@@ -167,6 +174,7 @@ def build_config(
     biopsy=None,
     tumour_lib=None,
     normal_lib=None,
+    genome_reference=None,
     pipeline_ver="undefined",
     ploidetect_ver="undefined",
     install_ploidetect=False,
@@ -248,8 +256,8 @@ def build_config(
     # Find bams
     yaml_lines.append("bams:")
     yaml_lines.append(f"{TAB}{patient_id}:")
-    tumour_bam_fn, genome_name = get_bam(tumour_lib)
-    normal_bam_fn, normal_genome_name = get_bam(normal_lib)
+    tumour_bam_fn, genome_name = get_bam(tumour_lib, genome_reference)
+    normal_bam_fn, normal_genome_name = get_bam(normal_lib, genome_reference)
 
     yaml_lines.append(f"{TAB}{TAB}somatic:")
     yaml_lines.append(f"{TAB}{TAB}{TAB}{tumour_lib}: {tumour_bam_fn}")
@@ -321,6 +329,9 @@ def parse_args():
     parser.add_argument("-b", "--biopsy", help="Find libraries from biopsy")
     parser.add_argument("-t", "--tumour-lib", help="Specify DNA tumour library")
     parser.add_argument("-n", "--normal-lib", help="Specify DNA tumour library")
+    parser.add_argument(
+        "-r", "--genome-reference", help="Specify hg19/hg38 instead of using tc flag"
+    )
     parser.add_argument(
         "-o",
         "--output-file",
