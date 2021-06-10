@@ -128,13 +128,13 @@ rule annotate_genes:
     output:
         f"{output_dir}/cna_genes.bed",
     log:
-        f"{output_dir}/cna_genes.log",
+        f"{output_dir}/logs/annotate_genes.log",
     conda:
         "conda_configs/r.yaml"
     params:
         scripts_dir=scripts_dir,
     shell:
-        "Rscript {params.scripts_dir}/annotate.R -i {input.cna} -a {input.gtf} -o {output}"
+        "Rscript {params.scripts_dir}/annotate.R -i {input.cna} -a {input.gtf} -o {output} &> {log}"
 
 
 module ploidetect:
