@@ -88,10 +88,11 @@ rule germline_cov:
         "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
+        threshold=config["window_threshold"],
     shell:
         "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
-        " | python3 {params.scripts_dir}/make_windows.py - 100000"
+        " | python3 {params.scripts_dir}/make_windows.py - {params.threshold}"
         " | bedtools sort -i stdin > {output}"
 
 
