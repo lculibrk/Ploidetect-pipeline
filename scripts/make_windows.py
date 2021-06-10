@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""
-# make_windows.py
+"""make_windows.py - threshold
 # Inputs: a stream of input ("-", stdin) from samtools and a threshold (integer)
 # Sums stream of input depth until cumulative coverage exceeds threshold, and makes a new bin when that occurs
 # Outputs bins to stdout
+
+Troubleshoot threshold for single blob/peak, either the case has no CNVs or the data is too noisy at that depth level.
+If you're sure there are CNVs in the data,  adjust the threshold.
+
+The size of the bins depends on the germline coverage.
+The 100000 is the threshold for normal depth to create variable-width bins.
+Ploidetect was developed for 40x normal, 80x tumor genomes.
+If the ratio of tumor to normal is not 2:1, adjust the threshold accordingly. So for 40x/40x you might decide to use a larger threshold of 200000 to account for the tumor genome having more noise.
 """
 import fileinput
 import sys
