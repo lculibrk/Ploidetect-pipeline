@@ -65,8 +65,6 @@ rule ploidetect_install:
         "conda_configs/r.yaml"
     params:
         devtools_install(),
-    version:
-        config["ploidetect_ver"]
     shell:
         "export LC_ALL=en_US.UTF-8; "
         " Rscript -e {params} "
