@@ -1,0 +1,11 @@
+
+bams:
+    COLO829-TestA:
+        somatic:
+            A36971: /projects/POG/POG_data/COLO829-TestA/wgs/biop1_t_A36971/merge/hg19a_bwa-mem-0.7.6a/A36971_2_lanes_dupsFlagged.bam
+        normal:
+            A36973: /projects/POG/POG_data/COLO829-TestA/wgs/blood1_n_A36973/merge/hg19a_bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam
+
+# genome_name should match bams
+genome_name:
+    "hg19"

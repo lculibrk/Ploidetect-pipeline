@@ -55,7 +55,8 @@ output_dir = config["output_dir"] if "output_dir" in config.keys() else ""
 
 
 # Load default values for references / annotations, etc.
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")
+configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.yaml")
 
 
 # If no output_dir given, use properties of GSC bioapps_api for standard project output location.

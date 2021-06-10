@@ -8,8 +8,10 @@ from constants import VERSION
 print(f"Ploidetect-pipeline {VERSION}")
 
 
-## Load config values
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+## Load default config values
+configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")
+configfile: os.path.join(workflow.basedir, "resources/config/default_case.yaml")
+configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.yaml")
 
 
 MEM_PER_CPU = 7900

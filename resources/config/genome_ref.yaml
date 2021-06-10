@@ -1,0 +1,42 @@
+# Reference data.  Selected by 'genome_name' value.
+# TODO: standard config should not refer to GSC - sync w/ gsc_build_config.py
+genome:
+    hg19:
+        /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
+    hg38:
+        /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
+annotation:
+    hg19:
+        /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
+    hg38:
+        /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
+array_positions:
+    hg19:
+        "resources/snp_arrays/hg19/SNP_array_positions.txt"
+    hg38:
+        "resources/snp_arrays/hg38/SNP_array_positions.txt"
+chromosomes:
+ - 1
+ - 2
+ - 3
+ - 4
+ - 5
+ - 6
+ - 7
+ - 8
+ - 9
+ - 10
+ - 11
+ - 12
+ - 13
+ - 14
+ - 15
+ - 16
+ - 17
+ - 18
+ - 19
+ - 20
+ - 21
+ - 22
+ - X
+ - Y

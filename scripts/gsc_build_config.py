@@ -11,56 +11,22 @@ from os.path import abspath, dirname, exists, join, realpath
 from ProjectInfo import BioappsApi
 from ruamel_yaml import YAML
 
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 
 logger = logging.getLogger(__name__)
 API = BioappsApi()
 CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
-GENOME_DATA = """\
-window_threshold: 100000
 
-# Reference data.  Selected by 'genome_name' value.
-genome:
-    hg19:
-        /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
-    hg38:
-        /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
-annotation:
-    hg19:
-        /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
-    hg38:
-        /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
-array_positions:
-    hg19:
-        "resources/snp_arrays/hg19/SNP_array_positions.txt"
-    hg38:
-        "resources/snp_arrays/hg38/SNP_array_positions.txt"
-chromosomes:
- - 1
- - 2
- - 3
- - 4
- - 5
- - 6
- - 7
- - 8
- - 9
- - 10
- - 11
- - 12
- - 13
- - 14
- - 15
- - 16
- - 17
- - 18
- - 19
- - 20
- - 21
- - 22
- - X
- - Y
-"""
+GENOME_REF_YAML = join(
+    dirname(abspath(__file__)), "..", "resources", "config", "genome_ref.yaml"
+)
+DEFAULT_RUN_YAML = join(
+    dirname(abspath(__file__)),
+    "..",
+    "resources",
+    "config",
+    "default_run_params.yaml",
+)
 
 
 def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
@@ -189,7 +155,11 @@ def get_bam(library, genome_reference=None):
 
 
 def genome_reference2genome_name(gsc_genome_reference):
-    return "hg19" if gsc_genome_reference == "hg19a" else gsc_genome_reference
+    if gsc_genome_reference.lower() in ("hg19", "hg19a", "grch37"):
+        return "hg19"
+    if gsc_genome_reference.lower() in ("hg38", "hg38_no_alt", "grch38"):
+        return "hg38"
+    return gsc_genome_reference
 
 
 def build_config(
@@ -201,6 +171,8 @@ def build_config(
     ploidetect_ver="undefined",
     install_ploidetect=False,
     project=None,
+    ref_yaml=GENOME_REF_YAML,
+    run_params_yaml=DEFAULT_RUN_YAML,
     **kwargs,
 ):
     """Build a GSC config for running Ploidetect.
@@ -225,6 +197,7 @@ def build_config(
         # Leave ploidetect_local_clone blank or 'None' to download from github
         ploidetect_local_clone: /gsc/pipelines/Ploidetect/undefined
         install_ploidetect: 0
+        window_threshold: 100000
         # Reference data.  Selected by 'genome_name' value.
         genome:
           hg19: /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
@@ -256,9 +229,11 @@ def build_config(
         - 21
         - 22
         - X
+        - Y
     """
     TAB = "  "
     yaml_lines = []
+    yaml = YAML()
 
     if not biopsy and not (tumour_lib and normal_lib):
         raise ValueError(
@@ -312,11 +287,16 @@ def build_config(
     )
     yaml_lines.append(f"install_ploidetect: {1 if bool(install_ploidetect) else 0}")
 
-    # Genomic Reference data
-    yaml_lines.append(GENOME_DATA)
-
-    yaml = YAML()
     config = yaml.load("\n".join(yaml_lines))
+
+    run_params = yaml.load(open(run_params_yaml))
+    for k, v in run_params.items():
+        if k not in config.keys():
+            config[k] = v
+
+    # Genomic Reference data
+    # yaml_lines.append(f"# Genome Reference data from: {ref_yaml}")
+    config.update(yaml.load(open(ref_yaml)))
 
     return config
 
