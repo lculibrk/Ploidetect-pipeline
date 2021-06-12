@@ -16,7 +16,7 @@ configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.yaml")
 
 MEM_PER_CPU = 7900
 
-chromosomes = config["chromosomes"]
+chromosomes = config["chromosomes"][config["genome_name"]]
 output_dir = config["output_dir"]
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")

@@ -1,4 +1,4 @@
-B#! /usr/bin/env Rscript
+#! /usr/bin/env Rscript
 # ploidetect_copynumber.R
 #
 # Runs Ploidetect's copy number caller on Ploidetect-preprocessed input data using Ploidetect's tumor purity/ploidy estimates
@@ -17,14 +17,13 @@ Options:
 		--size	maximum iterations to increase resolution [default: Inf]
 
 ' -> doc
-#
 # Load packages
 library(docopt)
 library(devtools)
 library(data.table)
 library(Ploidetect)
 library(ggrastr)
-#
+
 # Force data.table to use only one thread (defaults to a large number)
 setDTthreads(1)
 #
