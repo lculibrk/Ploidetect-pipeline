@@ -157,7 +157,9 @@ def get_bam(library, genome_reference=None):
         logger.warning(warn)
 
     bam_fns = glob.glob(join(bams[0]["data_path"], "*.bam"))
-    assert len(bam_fns) == 1, f"Bam finding error for: '{library}' (ref: {genome_reference})"
+    assert (
+        len(bam_fns) == 1
+    ), f"Bam finding error for: '{library}' (ref: {genome_reference})"
     return (bam_fns[0], bams[0]["genome_reference"])
 
 
