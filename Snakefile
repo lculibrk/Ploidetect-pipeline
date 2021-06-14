@@ -101,7 +101,7 @@ rule germline_cov:
         "samtools depth -r{wildcards.chr} -Q{params.qual} -m {params.maxd} {input.bam} 2>> {log}"
         " | awk -v FS='\\t' -v OFS='\\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
         " | python3 {params.scripts_dir}/make_windows.py - {params.threshold} 2>> {log}"
-        " | bedtools sort -i stdin > {output}  2>> {log}
+        " | bedtools sort -i stdin > {output}  2>> {log}"
 
         
 rule merge_germline:
@@ -346,8 +346,8 @@ rule mergedbed:
     """Merge all the data into a single file"""
     input:
         gc=rules.getgc.output,
-        tumour="{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed"",
-        normal="{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed"",
+        tumour="{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed",
+        normal="{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed",
         loh=rules.process_loh.output,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed"),
@@ -361,7 +361,7 @@ rule mergedbed:
     log:
         "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
     shell:
-        "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc})
+        "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc})"
         "| sed 's/chr//g' > {output}" ## Cuts out any "chr" if using hg38
         " 2> {log}"
         " && ls -l {output} >> {log}"
