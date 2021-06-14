@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 API = BioappsApi()
 CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
 GENOME_DATA = """\
+window_threshold: 100000
+
 # Reference data.  Selected by 'genome_name' value.
 genome:
     hg19:
