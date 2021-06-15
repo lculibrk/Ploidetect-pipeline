@@ -21,6 +21,10 @@ ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}
 # are we using docker?
 install_ploidetect: 0
 
+
+# sequence type
+sequence_type: "short"
+
 # make_windows.py threshold
 #   Troubleshoot threshold for single blob/peak, either the case has no CNVs or the data is too noisy at that depth level.
 #   If you're sure there are CNVs in the data,  adjust the threshold.
