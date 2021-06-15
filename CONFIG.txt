@@ -6,6 +6,13 @@ bams:
         normal:
             A36973: /projects/POG/POG_data/COLO829-TestA/wgs/blood1_n_A36973/merge/hg19a_bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam
 
+# Blank 
+models:
+    COLO829-TestA:
+        A36971:
+            tp: 1
+            ploidy: 3
+
 # genome_name should match bams
 genome_name:
     "hg19"
