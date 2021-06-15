@@ -1,4 +1,4 @@
-B#! /usr/bin/env Rscript
+#! /usr/bin/env Rscript
 # ploidetect_copynumber.R
 #
 # Runs Ploidetect's copy number caller on Ploidetect-preprocessed input data using Ploidetect's tumor purity/ploidy estimates
