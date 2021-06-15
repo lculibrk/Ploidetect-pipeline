@@ -61,7 +61,9 @@ def devtools_install():
 rule download_cytobands:
     """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
     input:
-        HTTP.remote("http://hgdownload.cse.ucsc.edu/goldenpath/hg19/database/cytoBand.txt.gz")
+        HTTP.remote(
+            expand("http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz", hgver = config["genome_name"])
+        )
     output:
         expand("resources/{hgver}/cytobands.txt", hgver = config["genome_name"])
     resources:
@@ -448,7 +450,7 @@ rule ploidetect_copynumber:
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect:devel"
+        "docker://lculibrk/ploidetect"
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
