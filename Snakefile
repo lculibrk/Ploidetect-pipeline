@@ -1,6 +1,8 @@
 import glob
 import os
 import sys
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+HTTP = HTTPRemoteProvider()
 
 sys.path.insert(0, workflow.basedir)
 from constants import VERSION
@@ -56,6 +58,17 @@ def devtools_install():
         devtools_cmd = f"devtools::install_github('lculibrk/Ploidetect', ref = '{ver}')"
     return f'"{devtools_cmd}"'
 
+rule download_cytobands:
+    """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
+    input:
+        HTTP.remote("http://hgdownload.cse.ucsc.edu/goldenpath/hg19/database/cytoBand.txt.gz")
+    output:
+        expand("resources/{hgver}/cytobands.txt", hgver = config["genome_name"])
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    shell:
+        "gunzip -c {input} > {output}"
 
 rule ploidetect_install:
     """Install Ploidetect R script into environment"""
@@ -391,6 +404,7 @@ rule preseg:
 rule ploidetect:
     """Runs Ploidetect"""
     input:
+        cytos=rules.download_cytobands.output,
         preseg=rules.preseg.output,
         install=(
             rules.ploidetect_install.output
@@ -434,7 +448,7 @@ rule ploidetect_copynumber:
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:devel"
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
