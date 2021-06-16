@@ -462,10 +462,10 @@ rule force_tcp:
         "Rscript -e '\n "
         "require(data.table) \n"
         "d = suppressWarnings(fread(\"{input}\")) \n "
-        "   if({params.tp_p[0]} == \"NA\"){{ \n "
+        "   if(is.na({params.tp_p[0]})){{ \n "
         "       message(\"CNV calling using automatically detected purity/ploidy values\") \n"
         "       fwrite(d, \"{output}\", sep = \"\\t\") \n "
-        "       stop() \n "
+        "       quit(status = 0) \n "
         "   }} \n "
         "   message(paste0(\"Manually provided purity of \", {params.tp_p[0]}, \" and ploidy of \", {params.tp_p[1]}, \" specified, using those.\")) \n"
         "   d$tp[1] = {params.tp_p[0]} \n "
@@ -486,7 +486,7 @@ rule ploidetect_copynumber:
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:devel"
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
@@ -498,4 +498,4 @@ rule ploidetect_copynumber:
         "Rscript {params.scripts_dir}/ploidetect_copynumber.R"
         " -i {input.segs} -m {input.models}"
         " -p {output.cna_plots} -o {output.cna}"
-        " &> {log}"
+        " &>> {log}"
