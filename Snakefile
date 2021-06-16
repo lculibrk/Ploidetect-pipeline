@@ -36,6 +36,12 @@ def nanopore_handling():
     else:
         return {"maxd":0,   "qual":50}
 
+def get_manual_tp_p(case, somatic):
+    if "models" in config:
+        if somatic in config["models"]:
+            return([config["models"][case][somatic]["tp"], config["models"][case][somatic]["ploidy"]])
+    return(["NA", "NA"])
+
 
 rule all:
     input:
@@ -408,7 +414,6 @@ rule preseg:
 rule ploidetect:
     """Runs Ploidetect"""
     input:
-        cytos=rules.download_cytobands.output,
         preseg=rules.preseg.output,
         install=(
             rules.ploidetect_install.output
@@ -438,11 +443,42 @@ rule ploidetect:
         " -o {output.models} -p {output.plots} -r {output.meta}"
         " &> {log}"
 
+rule force_tcp:
+    """Forces a new model of purity/ploidy for CNV calling if specified in the config"""
+    input:
+        model="{output_dir}/{case}/{somatic}_{normal}/models.txt"
+    output:
+        model="{output_dir}/{case}/{somatic}_{normal}/models_cnv.txt"
+    conda:
+        "conda_configs/r.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    resources:
+        cpus=1,
+        mem_mb=1 * MEM_PER_CPU,
+    params:
+        tp_p = lambda w: get_manual_tp_p(w.case, w.somatic)
+    ## CNV caller's log to record if a non-automated tc/ploidy was used
+    log: "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
+    shell:
+        "Rscript -e '\n "
+        "require(data.table) \n"
+        "d = suppressWarnings(fread(\"{input}\")) \n "
+        "   if(is.na({params.tp_p[0]})){{ \n "
+        "       message(\"CNV calling using automatically detected purity/ploidy values\") \n"
+        "       fwrite(d, \"{output}\", sep = \"\\t\") \n "
+        "       quit(status = 0) \n "
+        "   }} \n "
+        "   message(paste0(\"Manually provided purity of \", {params.tp_p[0]}, \" and ploidy of \", {params.tp_p[1]}, \" specified, using those.\")) \n"
+        "   d$tp[1] = {params.tp_p[0]} \n "
+        "   d$ploidy[1] = {params.tp_p[1]} \n "
+        "   fwrite(d, \"{output}\", sep = \"\\t\")' 2> {log}"
 
 rule ploidetect_copynumber:
     """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
     input:
-        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
+        cytos =expand("resources/{hgver}/cytobands.txt", hgver = config["genome_name"]),
+        models="{output_dir}/{case}/{somatic}_{normal}/models_cnv.txt",
         segs="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
         ploidetect_plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
     output:
@@ -452,7 +488,7 @@ rule ploidetect_copynumber:
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:devel"
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
@@ -464,4 +500,4 @@ rule ploidetect_copynumber:
         "Rscript {params.scripts_dir}/ploidetect_copynumber.R"
         " -i {input.segs} -m {input.models}"
         " -p {output.cna_plots} -o {output.cna}"
-        " &> {log}"
+        " &>> {log}"
