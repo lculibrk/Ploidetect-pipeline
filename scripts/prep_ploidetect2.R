@@ -21,12 +21,15 @@ library(Ploidetect)
 #
 # Parse arguments
 args = docopt(doc)
-#
+
+print(paste0(c(args$input,
+              " sent to Ploidetect::ploidetect_presegment version: ",
+              packageVersion("Ploidetect"))))
 # Read .bed table
 all_data = read.table(args$input, header = F, sep = "\t", skip = 1, stringsAsFactors = F)
 #
 # preprocess data
-out = ploidetect_presegment(all_data, verbose = T, filter_chromosomes = F)
+out = ploidetect_presegment(all_data)
 #
 # Save preprocessed data to output .RDS file
 saveRDS(out, args$output)
