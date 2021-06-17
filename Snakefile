@@ -41,11 +41,15 @@ else:
     config["maxd"] = config["sequence_type_defaults"]["short"]["maxd"]
     config["qual"] = config["sequence_type_defaults"]["short"]["qual"]
 
+
 def get_manual_tp_p(case, somatic):
     if "models" in config:
         if somatic in config["models"]:
-            return([config["models"][case][somatic]["tp"], config["models"][case][somatic]["ploidy"]])
-    return(["NA", "NA"])
+            return [
+                config["models"][case][somatic]["tp"],
+                config["models"][case][somatic]["ploidy"],
+            ]
+    return ["NA", "NA"]
 
 
 rule all:
@@ -205,7 +209,7 @@ rule splitwindowfile:
 
 rule genomecovsomatic:
     input:
-        lambda w: config["bams"][w.case]["somatic"][w.somatic],
+        sombam=lambda w: config["bams"][w.case]["somatic"][w.somatic],
         window=rules.splitwindowfile.output,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour/{chr}.bed"),
@@ -219,8 +223,10 @@ rule genomecovsomatic:
     params:
         qual=config["qual"],
         maxd=config["maxd"],
+    log:
+        "{output_dir}/logs/genomecovsomatic.{case}.{somatic}_{normal}.{chr}.log",
     shell:
-        "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]} "
+        "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input.sombam} "
         " | awk -v FS='\\t' -v OFS='\\t' '{{print $1, $2, $2 + 1, $3}}'"
         " | sort -k1,1 -k2,2n "
         " | bedtools map -b stdin -a {input.window} -c 4 -o mean > {output}"
@@ -228,7 +234,7 @@ rule genomecovsomatic:
 
 rule genomecovgermline:
     input:
-        lambda w: config["bams"][w.case]["normal"][w.normal],
+        normbam=lambda w: config["bams"][w.case]["normal"][w.normal],
         window=rules.splitwindowfile.output,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal/{chr}.bed"),
@@ -243,9 +249,9 @@ rule genomecovgermline:
         qual=config["qual"],
         maxd=config["maxd"],
     log:
-        "{output_dir}/logs/genomecovsomatic.{case}.{somatic}_{normal}.{chr}.log",
+        "{output_dir}/logs/genomecovgermline.{case}.{somatic}_{normal}.{chr}.log",
     shell:
-        "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]}"
+        "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input.normbam}"
         " | awk -v FS='\\t' -v OFS='\\t' '{{print $1, $2, $2 + 1, $3}}'"
         " | sort -k1,1 -k2,2n"
         " | bedtools map -b stdin -a {input.window} -c 4 -o mean > {output}"
@@ -454,12 +460,13 @@ rule ploidetect:
         " -o {output.models} -p {output.plots} -r {output.meta}"
         " &> {log}"
 
+
 rule force_tcp:
     """Forces a new model of purity/ploidy for CNV calling if specified in the config"""
     input:
-        model="{output_dir}/{case}/{somatic}_{normal}/models.txt"
+        model="{output_dir}/{case}/{somatic}_{normal}/models.txt",
     output:
-        model="{output_dir}/{case}/{somatic}_{normal}/models_cnv.txt"
+        model="{output_dir}/{case}/{somatic}_{normal}/models_cnv.txt",
     conda:
         "conda_configs/r.yaml"
     container:
@@ -468,27 +475,29 @@ rule force_tcp:
         cpus=1,
         mem_mb=1 * MEM_PER_CPU,
     params:
-        tp_p = lambda w: get_manual_tp_p(w.case, w.somatic)
+        tp_p=lambda w: get_manual_tp_p(w.case, w.somatic),
     ## CNV caller's log to record if a non-automated tc/ploidy was used
-    log: "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
+    log:
+        "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
     shell:
         "Rscript -e '\n "
         "require(data.table) \n"
-        "d = suppressWarnings(fread(\"{input}\")) \n "
+        'd = suppressWarnings(fread("{input}")) \n '
         "   if(is.na({params.tp_p[0]})){{ \n "
-        "       message(\"CNV calling using automatically detected purity/ploidy values\") \n"
-        "       fwrite(d, \"{output}\", sep = \"\\t\") \n "
+        '       message("CNV calling using automatically detected purity/ploidy values") \n'
+        '       fwrite(d, "{output}", sep = "\\t") \n '
         "       quit(status = 0) \n "
         "   }} \n "
-        "   message(paste0(\"Manually provided purity of \", {params.tp_p[0]}, \" and ploidy of \", {params.tp_p[1]}, \" specified, using those.\")) \n"
+        '   message(paste0("Manually provided purity of ", {params.tp_p[0]}, " and ploidy of ", {params.tp_p[1]}, " specified, using those.")) \n'
         "   d$tp[1] = {params.tp_p[0]} \n "
         "   d$ploidy[1] = {params.tp_p[1]} \n "
-        "   fwrite(d, \"{output}\", sep = \"\\t\")' 2> {log}"
+        '   fwrite(d, "{output}", sep = "\\t")\' 2> {log}'
+
 
 rule ploidetect_copynumber:
     """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
     input:
-        cytos =expand("resources/{hgver}/cytobands.txt", hgver = config["genome_name"]),
+        cytos=expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
         models="{output_dir}/{case}/{somatic}_{normal}/models_cnv.txt",
         segs="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
         ploidetect_plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
