@@ -15,7 +15,7 @@ array_positions:
         "resources/snp_arrays/hg19/SNP_array_positions.txt"
     hg38:
         "resources/snp_arrays/hg38/SNP_array_positions.txt"
-chromosomes:
+ref_chromosomes:
     hg19:
         - 1
         - 2

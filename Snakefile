@@ -3,23 +3,29 @@ import os
 import sys
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 
-HTTP = HTTPRemoteProvider()
-
 sys.path.insert(0, workflow.basedir)
 from constants import VERSION
+
+HTTP = HTTPRemoteProvider()
+MEM_PER_CPU = 7900
 
 print(f"Ploidetect-pipeline {VERSION}")
 
 
 ## Load default config values
+# - loading type errors like 'list indices must be integers or slices, not str'
+#   probably means the configfile given has a list where defaults were a dict.
+#   eg. config['chromosomes'] as list vs config['chromosomes']['hg38'] as list
 configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")
 configfile: os.path.join(workflow.basedir, "resources/config/default_case.yaml")
 configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.yaml")
 
 
-MEM_PER_CPU = 7900
-
-chromosomes = config["chromosomes"][config["genome_name"]]
+chromosomes = (
+    config["ref_chromosomes"][config["genome_name"]]
+    if "chromosomes" not in config
+    else config["chromosomes"]
+)
 output_dir = config["output_dir"]
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")
@@ -37,7 +43,9 @@ elif "sequence_type" in config:
     config["maxd"] = config["sequence_type_defaults"][config["sequence_type"]]["maxd"]
     config["qual"] = config["sequence_type_defaults"][config["sequence_type"]]["qual"]
 else:
-    logger.error(f"No sequence_type or maxd/qual parameters.  Using 'short' defaults.")
+    logger.warning(
+        f"No sequence_type or maxd/qual parameters.  Using 'short' defaults."
+    )
     config["maxd"] = config["sequence_type_defaults"]["short"]["maxd"]
     config["qual"] = config["sequence_type_defaults"]["short"]["qual"]
 
@@ -56,16 +64,6 @@ rule all:
         ],
 
 
-def devtools_install():
-    if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
-        install_path = config["ploidetect_local_clone"].format(**config)
-        devtools_cmd = f"devtools::install_local('{install_path}', force = TRUE)"
-    else:
-        ver = config["ploidetect_ver"]
-        devtools_cmd = f"devtools::install_github('lculibrk/Ploidetect', ref = '{ver}')"
-    return f'"{devtools_cmd}"'
-
-
 rule download_cytobands:
     """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
     input:
@@ -80,16 +78,30 @@ rule download_cytobands:
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
     shell:
         "gunzip -c {input} > {output}"
+
+
+ploidetect_install_cmd = (
+    "devtools::install_github('lculibrk/Ploidetect', ref = '{}')".format(
+        config["ploidetect_ver"]
+    )
+)
+if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
+    install_path = config["ploidetect_local_clone"].format(**config)
+    ploidetect_install_cmd = f"devtools::install_local('{install_path}', force = TRUE)"
+ploidetect_install_cmd = f'"{ploidetect_install_cmd}"'
 
 
 rule ploidetect_install:
     """Install Ploidetect R script into environment"""
     output:
         expand(
-            "{install_dir}/conda_configs/ploidetect_installed.txt",
+            "{install_dir}/conda_configs/ploidetect_installed_{ploidetect_ver}.txt",
             install_dir=workflow.basedir,
+            ploidetect_ver=config["ploidetect_ver"],
         ),
     resources:
         cpus=1,
@@ -97,11 +109,15 @@ rule ploidetect_install:
     conda:
         "conda_configs/r.yaml"
     params:
-        devtools_install(),
+        ploidetect_install_cmd,
+    log:
+        f"{workflow.basedir}/conda_configs/ploidetect_installed.log",
     shell:
+        "date >> {log}; echo {params} >> {log}; "
         "export LC_ALL=en_US.UTF-8; "
-        " Rscript -e {params} "
-        " && echo {params} > {output} && date >> {output}"
+        " Rscript -e {params} >> {log} 2>> {log}"
+        " && date > {output}"
+        " && echo {params} >> {output}"
 
 
 rule germline_cov:
