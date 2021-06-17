@@ -2,6 +2,7 @@ import glob
 import os
 import sys
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+
 HTTP = HTTPRemoteProvider()
 
 sys.path.insert(0, workflow.basedir)
@@ -30,11 +31,15 @@ array_positions = (
     )
 )
 
-def nanopore_handling():
-    if config["sequence_type"] == "ont":
-        return {"maxd":500, "qual":10}
-    else:
-        return {"maxd":0,   "qual":50}
+if "maxd" in config and "qual" in config:
+    pass
+elif "sequence_type" in config:
+    config["maxd"] = config["sequence_type_defaults"][config["sequence_type"]]["maxd"]
+    config["qual"] = config["sequence_type_defaults"][config["sequence_type"]]["qual"]
+else:
+    logger.error(f"No sequence_type or maxd/qual parameters.  Using 'short' defaults.")
+    config["maxd"] = config["sequence_type_defaults"]["short"]["maxd"]
+    config["qual"] = config["sequence_type_defaults"]["short"]["qual"]
 
 def get_manual_tp_p(case, somatic):
     if "models" in config:
@@ -66,19 +71,24 @@ def devtools_install():
         devtools_cmd = f"devtools::install_github('lculibrk/Ploidetect', ref = '{ver}')"
     return f'"{devtools_cmd}"'
 
+
 rule download_cytobands:
     """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
     input:
         HTTP.remote(
-            expand("http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz", hgver = config["genome_name"])
-        )
+            expand(
+                "http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz",
+                hgver=config["genome_name"],
+            )
+        ),
     output:
-        expand("resources/{hgver}/cytobands.txt", hgver = config["genome_name"])
+        expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
     shell:
         "gunzip -c {input} > {output}"
+
 
 rule ploidetect_install:
     """Install Ploidetect R script into environment"""
@@ -116,8 +126,8 @@ rule germline_cov:
     params:
         scripts_dir=scripts_dir,
         threshold=config["window_threshold"],
-        qual = nanopore_handling()["qual"],
-        maxd = nanopore_handling()["maxd"]
+        qual=config["qual"],
+        maxd=config["maxd"],
     log:
         "{output_dir}/logs/germline_cov.{case}.{normal}.{chr}.log",
     shell:
@@ -126,7 +136,7 @@ rule germline_cov:
         " | python3 {params.scripts_dir}/make_windows.py - {params.threshold} 2>> {log}"
         " | bedtools sort -i stdin > {output}  2>> {log}"
 
-        
+
 rule merge_germline:
     """Merge multi-chromosome output from germline_cov into single file"""
     input:
@@ -192,11 +202,11 @@ rule splitwindowfile:
         " 2> {log}"
         " && ls -l {output} >> {log}"
 
-        
+
 rule genomecovsomatic:
     input:
         lambda w: config["bams"][w.case]["somatic"][w.somatic],
-        window=rules.splitwindowfile.output
+        window=rules.splitwindowfile.output,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour/{chr}.bed"),
     conda:
@@ -205,23 +215,23 @@ rule genomecovsomatic:
         "docker://lculibrk/ploidetect"
     resources:
         cpus=1,
-        mem_mb=MEM_PER_CPU
-    params: 
-        qual = nanopore_handling()["qual"],
-        maxd = nanopore_handling()["maxd"]
+        mem_mb=MEM_PER_CPU,
+    params:
+        qual=config["qual"],
+        maxd=config["maxd"],
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]} "
-        " | awk -v FS='\\t' -v OFS='\\t' \'{{print $1, $2, $2 + 1, $3}}\'"
+        " | awk -v FS='\\t' -v OFS='\\t' '{{print $1, $2, $2 + 1, $3}}'"
         " | sort -k1,1 -k2,2n "
         " | bedtools map -b stdin -a {input.window} -c 4 -o mean > {output}"
 
-        
+
 rule genomecovgermline:
     input:
         lambda w: config["bams"][w.case]["normal"][w.normal],
-        window=rules.splitwindowfile.output
+        window=rules.splitwindowfile.output,
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal/{chr}.bed")
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal/{chr}.bed"),
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -229,24 +239,24 @@ rule genomecovgermline:
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
-    params: 
-        qual = nanopore_handling()["qual"],
-        maxd = nanopore_handling()["maxd"]
+    params:
+        qual=config["qual"],
+        maxd=config["maxd"],
     log:
-        "{output_dir}/logs/genomecovsomatic.{case}.{somatic}_{normal}.{chr}.log"
+        "{output_dir}/logs/genomecovsomatic.{case}.{somatic}_{normal}.{chr}.log",
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]}"
-        " | awk -v FS='\\t' -v OFS='\\t' \'{{print $1, $2, $2 + 1, $3}}\'"
+        " | awk -v FS='\\t' -v OFS='\\t' '{{print $1, $2, $2 + 1, $3}}'"
         " | sort -k1,1 -k2,2n"
         " | bedtools map -b stdin -a {input.window} -c 4 -o mean > {output}"
 
-        
+
 rule merge_split_tumour:
     input:
         expand(
             "{{output_dir}}/scratch/{{case}}/{{somatic}}_{{normal}}/tumour/{chr}.bed",
             chr=chromosomes,
-        )
+        ),
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed"),
     conda:
@@ -257,7 +267,7 @@ rule merge_split_tumour:
         cpus=1,
         mem_mb=MEM_PER_CPU,
     log:
-        "{output_dir}/logs/mergesomatic.{case}.{somatic}_{normal}.log"
+        "{output_dir}/logs/mergesomatic.{case}.{somatic}_{normal}.log",
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
         " 2> {log}"
@@ -269,7 +279,7 @@ rule merge_split_normal:
         expand(
             "{{output_dir}}/scratch/{{case}}/{{somatic}}_{{normal}}/normal/{chr}.bed",
             chr=chromosomes,
-        )
+        ),
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed"),
     conda:
@@ -319,7 +329,7 @@ rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
         loh=rules.compute_loh.output.loh,
-        window=rules.makewindowfile.output
+        window=rules.makewindowfile.output,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh.bed"),
     resources:
@@ -384,8 +394,9 @@ rule mergedbed:
     log:
         "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
     shell:
+        # Cuts out any "chr" if using hg38
         "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc})"
-        "| sed 's/chr//g' > {output}" ## Cuts out any "chr" if using hg38
+        "| sed 's/chr//g' > {output}"
         " 2> {log}"
         " && ls -l {output} >> {log}"
 
@@ -410,7 +421,7 @@ rule preseg:
     shell:
         "Rscript {params.scripts_dir}/prep_ploidetect2.R -i {input} -o {output} &> {log}"
 
-        
+
 rule ploidetect:
     """Runs Ploidetect"""
     input:
@@ -421,7 +432,7 @@ rule ploidetect:
             and "install_ploidetect" in config.keys()
             and config["install_ploidetect"]
             else __file__
-        )
+        ),
     output:
         plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
         models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
