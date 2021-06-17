@@ -42,16 +42,6 @@ else:
     config["qual"] = config["sequence_type_defaults"]["short"]["qual"]
 
 
-def get_manual_tp_p(case, somatic):
-    if "models" in config:
-        if somatic in config["models"]:
-            return [
-                config["models"][case][somatic]["tp"],
-                config["models"][case][somatic]["ploidy"],
-            ]
-    return ["NA", "NA"]
-
-
 rule all:
     input:
         [
@@ -475,7 +465,20 @@ rule force_tcp:
         cpus=1,
         mem_mb=1 * MEM_PER_CPU,
     params:
-        tp_p=lambda w: get_manual_tp_p(w.case, w.somatic),
+        tp=(
+            lambda w: config["models"][w.case][w.somatic]["tp"]
+            if "models" in config
+            and w.case in config["models"]
+            and w.somatic in config["models"][w.case]
+            else "NA"
+        ),
+        ploidy=(
+            lambda w: config["models"][w.case][w.somatic]["ploidy"]
+            if "models" in config
+            and w.case in config["models"]
+            and w.somatic in config["models"][w.case]
+            else "NA"
+        ),
     ## CNV caller's log to record if a non-automated tc/ploidy was used
     log:
         "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
@@ -483,14 +486,14 @@ rule force_tcp:
         "Rscript -e '\n "
         "require(data.table) \n"
         'd = suppressWarnings(fread("{input}")) \n '
-        "   if(is.na({params.tp_p[0]})){{ \n "
+        "   if(is.na({params.tp})){{ \n "
         '       message("CNV calling using automatically detected purity/ploidy values") \n'
         '       fwrite(d, "{output}", sep = "\\t") \n '
         "       quit(status = 0) \n "
         "   }} \n "
-        '   message(paste0("Manually provided purity of ", {params.tp_p[0]}, " and ploidy of ", {params.tp_p[1]}, " specified, using those.")) \n'
-        "   d$tp[1] = {params.tp_p[0]} \n "
-        "   d$ploidy[1] = {params.tp_p[1]} \n "
+        '   message(paste0("Manually provided purity of ", {params.tp}, " and ploidy of ", {params.ploidy}, " specified, using those.")) \n'
+        "   d$tp[1] = {params.tp} \n "
+        "   d$ploidy[1] = {params.ploidy} \n "
         '   fwrite(d, "{output}", sep = "\\t")\' 2> {log}'
 
 
