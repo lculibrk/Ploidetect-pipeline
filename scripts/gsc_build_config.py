@@ -17,16 +17,10 @@ logger = logging.getLogger(__name__)
 API = BioappsApi()
 CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
 
-GENOME_REF_YAML = join(
-    dirname(abspath(__file__)), "..", "resources", "config", "genome_ref.yaml"
-)
-DEFAULT_RUN_YAML = join(
-    dirname(abspath(__file__)),
-    "..",
-    "resources",
-    "config",
-    "default_run_params.yaml",
-)
+REFS = ("hg19", "hg38")
+DEFAULTS_FOLDER = abspath(join(dirname(abspath(__file__)), "..", "resources", "config"))
+GENOME_REF_YAMLS = [join(DEFAULTS_FOLDER, f"genome_ref.{ref}.yaml") for ref in REFS]
+DEFAULT_RUN_YAML = join(DEFAULTS_FOLDER, "default_run_params.yaml")
 
 
 def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
@@ -151,7 +145,7 @@ def get_bam(library, genome_reference=None):
 
     assert bams, f"Bam finding error for: '{library}' (ref: {genome_reference})"
 
-    bams.sort(key=lambda x: x["tumour_char"], reverse=True)
+    bams.sort(key=lambda x: bool(x["tumour_char"]), reverse=True)
     for bam in bams[1:]:
         warn = f"Ignoring tumour bam {bam['data_path']}"
         logger.warning(warn)
@@ -181,7 +175,7 @@ def build_config(
     ploidetect_ver="undefined",
     install_ploidetect=False,
     project=None,
-    ref_yaml=GENOME_REF_YAML,
+    ref_yamls=GENOME_REF_YAMLS,
     run_params_yaml=DEFAULT_RUN_YAML,
     **kwargs,
 ):
@@ -305,8 +299,18 @@ def build_config(
             config[k] = v
 
     # Genomic Reference data
-    # yaml_lines.append(f"# Genome Reference data from: {ref_yaml}")
-    config.update(yaml.load(open(ref_yaml)))
+    # each reference should have the same keys:
+    #   ['annotation', 'array_positions', 'genome', 'ref_chromosomes']
+    # Values for reference should be under reference names to avoid conflicts. eg:
+    #   ref['annotation']['hg38'] = <filepath_to_gtf>
+    for ref_yaml_fn in ref_yamls:
+        logger.info(f"Loading genome reference data from f{ref_yaml_fn}")
+        ref = yaml.load(open(ref_yaml_fn))
+        for k, v in ref.items():
+            if k not in config:
+                config[k] = v
+            else:
+                config[k].update(v)
 
     return config
 
