@@ -12,13 +12,7 @@ MEM_PER_CPU = 7900
 print(f"Ploidetect-pipeline {VERSION}")
 
 
-## Load default config values
-# - loading type errors like 'list indices must be integers or slices, not str'
-#   probably means the configfile given has a list where defaults were a dict.
-#   eg. config['chromosomes'] as list vs config['chromosomes']['hg38'] as list
-configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")
-configfile: os.path.join(workflow.basedir, "resources/config/default_case.yaml")
-configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.yaml")
+include: "defaults.smk"
 
 
 chromosomes = (
@@ -26,7 +20,7 @@ chromosomes = (
     if "chromosomes" not in config
     else config["chromosomes"]
 )
-output_dir = config["output_dir"]
+output_dir = config["output_dir"] if "output_dir" in config else "ploidetect_out"
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")
 array_positions = (
@@ -48,6 +42,10 @@ else:
     )
     config["maxd"] = config["sequence_type_defaults"]["short"]["maxd"]
     config["qual"] = config["sequence_type_defaults"]["short"]["qual"]
+if "window_threshold" not in config:
+    config["window_threshold"] = config["default_window_threshold"]
+if "ploidetect_ver" not in config:
+    config["ploidetect_ver"] = config["default_ploidetect_ver"]
 
 
 rule all:
@@ -89,7 +87,7 @@ ploidetect_install_cmd = (
         config["ploidetect_ver"]
     )
 )
-if config["ploidetect_local_clone"] and config["ploidetect_local_clone"] != "None":
+if "ploidetect_local_clone" in config and config["ploidetect_local_clone"]:
     install_path = config["ploidetect_local_clone"].format(**config)
     ploidetect_install_cmd = f"devtools::install_local('{install_path}', force = TRUE)"
 ploidetect_install_cmd = f'"{ploidetect_install_cmd}"'

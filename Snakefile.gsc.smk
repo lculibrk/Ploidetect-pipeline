@@ -66,17 +66,23 @@ else:
     genome_reference = genome_reference2genome_name(genome_reference)
     logger.warning(f"Found genome_reference: {genome_reference}")
 
-# Current output_dir value, before loading any defaults.
-output_dir = config["output_dir"] if "output_dir" in config.keys() else ""
-
 
 # Load default values for references / annotations, etc.
 configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")
-configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.yaml")
+configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.hg19.yaml")
+configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.hg38.yaml")
 
+
+# Use local clone for now, for rapid development.
+# TODO: use singularity deployment reliablity in future.
+if "ploidetect_ver" not in config:
+    config["ploidetect_ver"] = config["default_ploidetect_ver"]
+config["ploidetect_local_clone"] = config["default_ploidetect_local_clone"]
 
 # If no output_dir given, use properties of GSC bioapps_api for standard project output location.
-if not output_dir:
+if "output_dir" in config.keys():
+    output_dir = config["output_dir"]
+else:
     output_dir = get_gsc_output_folder(
         patient_id=config["id"],
         tumour_lib=config["tumour_lib"],
