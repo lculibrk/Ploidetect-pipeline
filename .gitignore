@@ -1,4 +1,4 @@
-B# Temp files
+# Temp files
 .snakemake
 *~
 .vscode
