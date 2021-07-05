@@ -1,5 +1,5 @@
 # ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
-default_ploidetect_ver: v1.2.0
+default_ploidetect_ver: v1.2.1
 # Leave ploidetect_local_clone blank or 'None' to download from github
 default_ploidetect_local_clone: /gsc/pipelines/Ploidetect/{default_ploidetect_ver}
 
