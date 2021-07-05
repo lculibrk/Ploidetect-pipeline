@@ -48,6 +48,22 @@ else:
     )
     config["maxd"] = config["sequence_type_defaults"]["short"]["maxd"]
     config["qual"] = config["sequence_type_defaults"]["short"]["qual"]
+## Get a unique list of bam names-paths so we can avoid double-computing
+## Explanation:
+## config["bams"].values() expands the bams without regard for cases to get a list of lists
+## each list corresponds to the bams for a particular case
+## we then flatten this list of lists to get a unique set of lib:bam mappings
+## This is used in the preprocessing:
+## If multiple case runs depend on the same bam, we just have to compute it once now
+## It was necessary to do the below to decouple id from the bams dict
+lib_bam_dict = {k:d[k] for d in [item for sublist in [list(i.values()) for i in list(config["bams"].values())] for item in sublist] for k in d}
+
+def get_manual_tp_p(case, somatic):
+    if "models" in config:
+        if case in config["models"]:
+            if somatic in config["models"][case]:
+                return([config["models"][case][somatic]["tp"], config["models"][case][somatic]["ploidy"]])
+    return(["NA", "NA"])
 
 
 rule all:
@@ -80,8 +96,12 @@ rule download_cytobands:
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    log:
+        expand("{output_dir}/logs/cytoband_download.txt", output_dir = output_dir)
     shell:
-        "gunzip -c {input} > {output}"
+        "gunzip -c {input} > {output} 2> {log}"
 
 
 ploidetect_install_cmd = (
@@ -123,9 +143,9 @@ rule ploidetect_install:
 rule germline_cov:
     """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins"""
     input:
-        bam=lambda w: config["bams"][w.case]["normal"][w.normal],
+        bam=lambda w: lib_bam_dict[w.normal],
     output:
-        temp("{output_dir}/scratch/{case}/{normal}/normal/{chr}.bed"),
+        temp("{output_dir}/scratch/{normal}/normal/{chr}.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -139,7 +159,7 @@ rule germline_cov:
         qual=config["qual"],
         maxd=config["maxd"],
     log:
-        "{output_dir}/logs/germline_cov.{case}.{normal}.{chr}.log",
+        "{output_dir}/logs/germline_cov.{normal}.{chr}.log",
     shell:
         "samtools depth -r{wildcards.chr} -Q{params.qual} -m {params.maxd} {input.bam} 2>> {log}"
         " | awk -v FS='\\t' -v OFS='\\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
@@ -151,11 +171,11 @@ rule merge_germline:
     """Merge multi-chromosome output from germline_cov into single file"""
     input:
         expand(
-            "{{output_dir}}/scratch/{{case}}/{{normal}}/normal/{chr}.bed",
+            "{{output_dir}}/scratch/{{normal}}/normal/{chr}.bed",
             chr=chromosomes,
         ),
     output:
-        temp("{output_dir}/scratch/{case}/{normal}/germline.bed"),
+        temp("{output_dir}/scratch/{normal}/germline.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -164,7 +184,7 @@ rule merge_germline:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/merge_germline.{case}.{normal}.log",
+        "{output_dir}/logs/merge_germline.{normal}.log",
     shell:
         "ls -l {input} >> {log};"
         "cat {input} | bedtools sort -i stdin > {output}"
@@ -176,7 +196,7 @@ rule makewindowfile:
     input:
         rules.merge_germline.output,
     output:
-        temp("{output_dir}/scratch/{case}/{normal}/windows.txt"),
+        temp("{output_dir}/scratch/{normal}/windows.txt"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -185,7 +205,7 @@ rule makewindowfile:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/makewindowfile.{case}.{normal}.log",
+        "{output_dir}/logs/makewindowfile.{normal}.log",
     shell:
         "cut -f 1,2,3 < {input} | bedtools sort -i stdin > {output}"
         " 2> {log}"
@@ -197,7 +217,7 @@ rule splitwindowfile:
     input:
         rules.makewindowfile.output,
     output:
-        temp("{output_dir}/scratch/{case}/{normal}/windows/{chr}.txt"),
+        temp("{output_dir}/scratch/{normal}/windows/{chr}.txt"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -206,7 +226,7 @@ rule splitwindowfile:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/splitwindowfile.{case}.{normal}.{chr}.log",
+        "{output_dir}/logs/splitwindowfile.{normal}.{chr}.log",
     shell:
         "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
         " 2> {log}"
@@ -215,10 +235,10 @@ rule splitwindowfile:
 
 rule genomecovsomatic:
     input:
-        sombam=lambda w: config["bams"][w.case]["somatic"][w.somatic],
-        window=rules.splitwindowfile.output,
+        sombam=lambda w: lib_bam_dict[w.somatic],
+        window=rules.splitwindowfile.output
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour/{chr}.bed"),
+        temp("{output_dir}/scratch/{somatic}_{normal}/tumour/{chr}.bed"),
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -240,10 +260,10 @@ rule genomecovsomatic:
 
 rule genomecovgermline:
     input:
-        normbam=lambda w: config["bams"][w.case]["normal"][w.normal],
-        window=rules.splitwindowfile.output,
+        normbam=lambda w: lib_bam_dict[w.normal],
+        window=rules.splitwindowfile.output
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal/{chr}.bed"),
+        temp("{output_dir}/scratch/{somatic}_{normal}/normal/{chr}.bed")
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -255,7 +275,7 @@ rule genomecovgermline:
         qual=config["qual"],
         maxd=config["maxd"],
     log:
-        "{output_dir}/logs/genomecovgermline.{case}.{somatic}_{normal}.{chr}.log",
+        "{output_dir}/logs/genomecovsomatic.{somatic}_{normal}.{chr}.log"
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input.normbam}"
         " | awk -v FS='\\t' -v OFS='\\t' '{{print $1, $2, $2 + 1, $3}}'"
@@ -266,11 +286,11 @@ rule genomecovgermline:
 rule merge_split_tumour:
     input:
         expand(
-            "{{output_dir}}/scratch/{{case}}/{{somatic}}_{{normal}}/tumour/{chr}.bed",
+            "{{output_dir}}/scratch/{{somatic}}_{{normal}}/tumour/{chr}.bed",
             chr=chromosomes,
         ),
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed"),
+        "{output_dir}/scratch/{somatic}_{normal}/tumour.bed",
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -279,7 +299,7 @@ rule merge_split_tumour:
         cpus=1,
         mem_mb=MEM_PER_CPU,
     log:
-        "{output_dir}/logs/mergesomatic.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/mergesomatic.{somatic}_{normal}.log"
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
         " 2> {log}"
@@ -289,11 +309,11 @@ rule merge_split_tumour:
 rule merge_split_normal:
     input:
         expand(
-            "{{output_dir}}/scratch/{{case}}/{{somatic}}_{{normal}}/normal/{chr}.bed",
+            "{{output_dir}}/scratch/{{somatic}}_{{normal}}/normal/{chr}.bed",
             chr=chromosomes,
         ),
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed"),
+        "{output_dir}/scratch/{somatic}_{normal}/normal.bed",
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -302,7 +322,7 @@ rule merge_split_normal:
         cpus=1,
         mem_mb=MEM_PER_CPU,
     log:
-        "{output_dir}/logs/mergenormal.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/mergenormal.{somatic}_{normal}.log",
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
         " 2> {log}"
@@ -312,11 +332,11 @@ rule merge_split_normal:
 rule compute_loh:
     """Variant call the germline, filter for heterozygous snps and count alleles in somatic"""
     input:
-        sombam=lambda w: config["bams"][w.case]["somatic"][w.somatic],
-        normbam=lambda w: config["bams"][w.case]["normal"][w.normal],
+        sombam=lambda w: lib_bam_dict[w.somatic],
+        normbam=lambda w: lib_bam_dict[w.normal],
     output:
-        folder=directory("{output_dir}/scratch/{case}/{somatic}_{normal}/loh_tmp"),
-        loh=temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt"),
+        folder=directory("{output_dir}/scratch/{somatic}_{normal}/loh_tmp"),
+        loh=temp("{output_dir}/scratch/{somatic}_{normal}/loh_tmp/loh_raw.txt"),
     params:
         genome=config["genome"][config["genome_name"]],
         array_positions={array_positions},
@@ -329,7 +349,7 @@ rule compute_loh:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/compute_loh.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/compute_loh.{somatic}_{normal}.log",
     shell:
         "bash {params.scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions}"
@@ -343,7 +363,7 @@ rule process_loh:
         loh=rules.compute_loh.output.loh,
         window=rules.makewindowfile.output,
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh.bed"),
+        temp("{output_dir}/scratch/{somatic}_{normal}/loh.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -354,7 +374,7 @@ rule process_loh:
     params:
         scripts_dir=scripts_dir,
     log:
-        "{output_dir}/logs/process_loh.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/process_loh.{somatic}_{normal}.log",
     shell:
         "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
@@ -369,7 +389,7 @@ rule getgc:
     input:
         window=rules.makewindowfile.output,
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/gc.bed"),
+        temp("{output_dir}/scratch/{somatic}_{normal}/gc.bed"),
     params:
         genome=config["genome"][config["genome_name"]],
     resources:
@@ -380,7 +400,7 @@ rule getgc:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/getgc.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/getgc.{somatic}_{normal}.log",
     shell:
         "bedtools nuc -fi {params.genome} -bed {input} | cut -f1,2,3,5 | tail -n +2 > {output}"
         " 2> {log}"
@@ -391,11 +411,11 @@ rule mergedbed:
     """Merge all the data into a single file"""
     input:
         gc=rules.getgc.output,
-        tumour="{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed",
-        normal="{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed",
+        tumour="{output_dir}/scratch/{somatic}_{normal}/tumour.bed",
+        normal="{output_dir}/scratch/{somatic}_{normal}/normal.bed",
         loh=rules.process_loh.output,
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed"),
+        "{output_dir}/scratch/{somatic}_{normal}/merged.bed",
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -404,7 +424,7 @@ rule mergedbed:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/mergedbed.{somatic}_{normal}.log",
     shell:
         # Cuts out any "chr" if using hg38
         "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc})"
@@ -416,7 +436,7 @@ rule mergedbed:
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
-        "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
+        "{output_dir}/scratch/{somatic}_{normal}/merged.bed",
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
     resources:
