@@ -1,0 +1,29 @@
+output_dir: "ploidetect_out"
+temp_dir:
+
+# ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
+ploidetect_ver: v1.1.1
+# Leave ploidetect_local_clone blank or 'None' to download from github
+ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}
+
+# are we using docker?
+install_ploidetect: 0
+
+# make_windows.py threshold
+#   Troubleshoot threshold for single blob/peak, either the case has no CNVs or the data is too noisy at that depth level.
+#   If you're sure there are CNVs in the data,  adjust the threshold.
+#
+#   The size of the bins depends on the germline coverage.
+#   The 100000 is the threshold for normal depth to create variable-width bins.
+#   Ploidetect was developed for 40x normal, 80x tumor genomes.
+#   If the ratio of tumor to normal is not 2:1, adjust the threshold accordingly. So for 40x/40x you might decide to use a larger threshold of 200000 to account for the tumor genome having more noise.
+window_threshold: 100000
+
+# short read processing or long read ont for nanopore
+sequence_type_defaults:
+  short:
+    maxd: 0
+    qual: 50
+  ont:
+    maxd: 500
+    qual: 10
