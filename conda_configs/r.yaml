@@ -1,5 +1,7 @@
 channels:
  - r
+ - conda-forge
+ - bioconda
 dependencies:
  - r-essentials
  - r-docopt
