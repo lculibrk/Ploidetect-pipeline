@@ -1,26 +1,27 @@
 channels:
  - bioconda
  - r
+ - conda-forge
 dependencies:
  - python=3.8
  - jupyter
  - mamba
- - snakemake
- - bcftools
- - bedtools
- - samtools
- - bioconductor-genomicranges
- - r-essentials
- - r-base
- - r-docopt
- - r-devtools
- - r-ggrastr
- - r-tidyr
- - r-gridextra
- - r-cowplot
- - r-viridis
- - r-igraph
- - ruamel
+ - bioconda:snakemake
+ - bioconda:bcftools
+ - bioconda:bedtools
+ - bioconda:samtools
+ - bioconda:bioconductor-genomicranges
+ - r:r-essentials
+ - r:r-base
+ - r:r-docopt
+ - r:r-devtools
+ - conda-forge:r-ggrastr
+ - r:r-tidyr
+ - r:r-gridextra
+ - conda-forge:r-cowplot
+ - r:r-viridis
+ - r:r-igraph
+ - r:ruamel
  - pip
  - pip:
    - "ProjectInfo"
