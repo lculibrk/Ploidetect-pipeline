@@ -236,7 +236,7 @@ rule process_loh:
     container:
         "docker://lculibrk/ploidetect"
     shell:
-        "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh}"
+        "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh[1]}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
         " | bedtools sort -i stdin"
         " | Rscript {scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
@@ -285,6 +285,9 @@ rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
         temp_dir + "{case}/{somatic}_{normal}/merged.bed",
+        rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
+            "install_ploidetect"
+        ] else __file__,
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
     resources:
@@ -295,7 +298,7 @@ rule preseg:
     container:
         "docker://lculibrk/ploidetect"
     shell:
-        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input} -o {output}"
+        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -o {output}"
 
 
 rule ploidetect:

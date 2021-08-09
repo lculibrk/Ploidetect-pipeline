@@ -9,8 +9,8 @@ Usage:
 prep_ploidetect2.R -i input -o output.txt
 
 Options:
--i --input input      input .bed data file
--o --output output    output file
+-i	--input		input	input .bed data file
+-o	--output	output	output file
 ' -> doc
 # 
 # load libraries
