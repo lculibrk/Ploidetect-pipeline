@@ -1,6 +1,8 @@
 import glob
 import os
 import sys
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+HTTP = HTTPRemoteProvider()
 
 sys.path.insert(0, workflow.basedir)
 from constants import VERSION
@@ -86,6 +88,25 @@ rule ploidetect_install:
         " Rscript -e {params} "
         " && echo {params} > {output} && date >> {output}"
 
+
+rule download_cytobands:
+    """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
+    input:
+        HTTP.remote(
+            expand(
+                "http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz",
+                hgver=config["genome_name"],
+            )
+        ),
+    output:
+        expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    shell:
+        "gunzip -c {input} > {output}"
 
 rule germline_cov:
     """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins"""
@@ -328,9 +349,10 @@ rule ploidetect:
 rule ploidetect_copynumber:
     """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
     input:
-        "{output_dir}/{case}/{somatic}_{normal}/models.txt",
-        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
-        "{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
+        cytos=expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
+        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
+        rds="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
+        plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
     output:
         "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
         "{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
@@ -342,5 +364,7 @@ rule ploidetect_copynumber:
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
+    container:
+        "docker://lculibrk/ploidetect"
     shell:
-        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input[1]} -m {input[0]} -p {output[1]} -o {output[0]} &> {log}"
+        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input.rds} -m {input.models} -p {output[1]} -o {output[0]} &> {log}"
