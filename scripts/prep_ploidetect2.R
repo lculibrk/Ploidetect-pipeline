@@ -6,11 +6,12 @@
 ' prep_ploidetect2.R
 
 Usage: 
-prep_ploidetect2.R -i input -o output.txt
+prep_ploidetect2.R -i input -o output.txt [-c cyto]
 
 Options:
 -i	--input		input	input .bed data file
 -o	--output	output	output file
+-c	--cyto	cytos	cytoband file
 ' -> doc
 # 
 # load libraries

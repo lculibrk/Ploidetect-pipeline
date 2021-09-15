@@ -6,13 +6,14 @@
 ' ploidetect_copynumber.R
 
 Usage: 
-ploidetect_copynumber.R -i input -m models.txt -p plots.pdf -o output.txt [--size=SIZE]
+ploidetect_copynumber.R -i input -m models.txt -p plots.pdf -o output.txt [-c cyto --size=SIZE]
 
 Options:
 -i	--input	input	input .RDS data file
 -m	--models	models	input .txt file of desired models for copy number calling
 -p	--plots	plots	output plots file
 -o	--output	output	output file
+-c	--cyto	cytos	cytoband file
 		--size	maximum iterations to increase resolution [default: Inf]
 
 ' -> doc

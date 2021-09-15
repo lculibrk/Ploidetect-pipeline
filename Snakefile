@@ -2,6 +2,7 @@ import glob
 import os
 import sys
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import requests
 HTTP = HTTPRemoteProvider()
 
 sys.path.insert(0, workflow.basedir)
@@ -33,7 +34,16 @@ array_positions = (
         workflow.basedir, config["array_positions"][config["genome_name"]]
     )
 )
-
+cyto_path = config["cyto_path"]
+if cyto_path != "":
+    hgver = config["genome_name"]
+    connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
+    if connec.status_code == 200:
+        cyto_path = f"resources/{hgver}/cytobands.txt"
+        cyto_arg = f"-c {cyto_path}"
+    else:
+        cyto_path = __file__
+        cyto_arg = ""
 
 ## Parse sample information
 bams_dict = config["bams"]
@@ -309,6 +319,7 @@ rule preseg:
         rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
             "install_ploidetect"
         ] else __file__,
+        cytos=cyto_path,
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
     resources:
@@ -319,7 +330,7 @@ rule preseg:
     container:
         "docker://lculibrk/ploidetect"
     shell:
-        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -o {output}"
+        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -c {input.cytos} -o {output}"
 
 
 rule ploidetect:
@@ -329,6 +340,7 @@ rule ploidetect:
         rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
             "install_ploidetect"
         ] else __file__,
+        cytos=cyto_path,
     output:
         plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
         models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
@@ -340,10 +352,12 @@ rule ploidetect:
         mem_mb=24 * MEM_PER_CPU,
     container:
         "docker://lculibrk/ploidetect"
+    params:
+        cyto_arg = cyto_arg
     shell:
         "Rscript {scripts_dir}/run_ploidetect2.R "
         " -i {input[0]} "
-        " -o {output.models} -p {output.plots} -r {output.meta}"
+        " -o {output.models} -p {output.plots} -r {output.meta} {params.cyto_arg}"
 
 
 rule ploidetect_copynumber:
@@ -366,5 +380,7 @@ rule ploidetect_copynumber:
         mem_mb=24 * MEM_PER_CPU,
     container:
         "docker://lculibrk/ploidetect"
+    params:
+        cyto_arg = cyto_arg
     shell:
-        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input.rds} -m {input.models} -p {output[1]} -o {output[0]} &> {log}"
+        "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input.rds} -m {input.models} -p {output[1]} -o {output[0]} {params.cyto_arg} &> {log}"

@@ -13,8 +13,11 @@ genome_name:
 output_dir: "ploidetect_out"
 temp_dir:
 
+# Are we using custom cytobands? put "none" to disable cytoband filtering (not recommended)
+cyto_path:
+
 # ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
-ploidetect_ver: v1.0.0
+ploidetect_ver: v1.2.3
 # Leave ploidetect_local_clone blank or 'None' to download from github
 ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}
 
