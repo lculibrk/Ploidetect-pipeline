@@ -54,9 +54,17 @@ mem_per_cpu: 7900
 
 
 ## genome
-
 genome:
     hg19:
         /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.faa
     hg38:
         /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.faa
+
+
+## Sequence type
+ont:
+    maxd: 500
+    qual: 10
+short:
+    maxd: 1000
+    qual: 50

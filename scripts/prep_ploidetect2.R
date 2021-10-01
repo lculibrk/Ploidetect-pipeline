@@ -1,3 +1,4 @@
+#! /usr/bin/env Rscript
 # prep_ploidetect2.R
 #
 # preprocesses input .bed file into an .RDS containing aggregated, pre-segmented data
@@ -13,7 +14,7 @@ Options:
 -o	--output	output	output file
 -c	--cyto	cytos	cytoband file
 ' -> doc
-# 
+#
 # load libraries
 library(docopt)
 library(devtools)

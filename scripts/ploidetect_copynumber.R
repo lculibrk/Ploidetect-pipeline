@@ -1,5 +1,6 @@
+B#! /usr/bin/env Rscript
 # ploidetect_copynumber.R
-# 
+#
 # Runs Ploidetect's copy number caller on Ploidetect-preprocessed input data using Ploidetect's tumor purity/ploidy estimates
 
 # Docopt script docstring
@@ -28,6 +29,9 @@ library(ggrastr)
 # Force data.table to use only one thread (defaults to a large number)
 setDTthreads(1)
 #
+# Print version
+print(paste0("Running Ploidetect version: ", packageVersion("Ploidetect")))
+#
 # Parse arguments
 args = docopt(doc)
 #
@@ -35,7 +39,7 @@ args = docopt(doc)
 in_rds = readRDS(args$input)
 #
 # Read purity/ploidy models
-in_models = read.table(file = args$models, sep = " ", stringsAsFactors=F, header = T)
+in_models = read.table(file = args$models, sep = "\t", stringsAsFactors=F, header = T)
 #
 # Load centromere positions
 if(cyto %in% names(args)){
@@ -65,5 +69,3 @@ dev.off()
 write.table(file = args$output, x = CN_calls, col.names = T, row.names=F, sep = "\t")
 # Write segmented CNV calls to file
 write.table(file = paste0(gsub(".txt", "", args$output), "_condensed.txt"), x = result$segged_cna_data, col.names = T, row.names = F, quote = F, sep = "\t")
-
-

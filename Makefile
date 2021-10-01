@@ -1,8 +1,6 @@
 .PHONY: help
 .DEFAULT_GOAL := help
 
-help : Makefile
-	@sed -n 's/:*##//p' $<
 
 VENV_NAME=venv
 
@@ -32,3 +30,6 @@ lint-snakefiles: format-code  ## snakemake linting suggestions
 	snakemake Snakefile.gsc.smk --lint
 # must be called individually on each Snakefile, but checks all imported rules
 #	snakemake Snakefile --lint
+
+help:  ## show this message and exit
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[32m%-13s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
