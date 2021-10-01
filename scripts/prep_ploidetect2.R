@@ -25,8 +25,15 @@ args = docopt(doc)
 # Read .bed table
 all_data = read.table(args$input, header = F, sep = "\t", skip = 1, stringsAsFactors = F)
 #
+# cytoband
+if(cyto %in% names(args)){
+    cytos = args$cyto
+}else{
+    cytos = F
+}
+#
 # preprocess data
-out = ploidetect_presegment(all_data)
+out = ploidetect_presegment(all_data, centromeres = cytos)
 #
 # Save preprocessed data to output .RDS file
 saveRDS(out, args$output)
