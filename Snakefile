@@ -120,7 +120,7 @@ rule germline_cov:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "samtools depth -r{wildcards.chr} -Q 21 {input.bam}"
         " | awk -v FS='\t' -v OFS='\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
@@ -140,7 +140,7 @@ rule merge_germline:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
 
@@ -157,7 +157,7 @@ rule makewindowfile:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "cut -f 1,2,3 < {input} | bedtools sort -i stdin > {output}"
 
@@ -174,7 +174,7 @@ rule splitwindowfile:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
 
@@ -193,7 +193,7 @@ rule genomecovsomatic:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "bedtools multicov -bams {input.sombam} {input.nombam} -q 20 -bed {input.window}  > {output}"
 
@@ -213,7 +213,7 @@ rule mergesomatic:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "cat {input} | bedtools sort -i stdin > {output}"
 
@@ -235,7 +235,7 @@ rule compute_loh:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "bash {scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
         " {params.genome} {params.array_positions}"
@@ -255,7 +255,7 @@ rule process_loh:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh[1]}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
@@ -277,7 +277,7 @@ rule getgc:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "bedtools nuc -fi {params.genome} -bed {input} | cut -f1,2,3,5 | tail -n +2 > {output}"
 
@@ -297,7 +297,7 @@ rule mergedbed:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc}) > {output}"
 
@@ -317,7 +317,7 @@ rule preseg:
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -o {output}"
 
@@ -339,7 +339,7 @@ rule ploidetect:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "Rscript {scripts_dir}/run_ploidetect2.R "
         " -i {input[0]} "
@@ -365,6 +365,6 @@ rule ploidetect_copynumber:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:1.2.2"
     shell:
         "Rscript {scripts_dir}/ploidetect_copynumber.R -i {input.rds} -m {input.models} -p {output[1]} -o {output[0]} &> {log}"
