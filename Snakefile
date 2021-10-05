@@ -157,7 +157,7 @@ rule download_cytobands:
     conda:
         "conda_configs/sequence_processing.yaml"
     shell:
-        "gunzip -c {input} > {output}"
+        "gunzip -c {input} | sed 's/chr//g' > {output}"
 
 rule download_genome:
     input:
@@ -204,7 +204,7 @@ rule germline_cov:
         "samtools depth -r{wildcards.chr} -Q{params.qual} -m {params.maxd} {input.bam} 2>> {log}"
         " | awk -v FS='\\t' -v OFS='\\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
         " | python3 {params.scripts_dir}/make_windows.py - {params.threshold} 2>> {log}"
-        " | bedtools sort -i stdin > {output}  2>> {log}
+        " | bedtools sort -i stdin > {output}  2>> {log}"
 
         
 rule merge_germline:
@@ -390,7 +390,7 @@ rule compute_loh:
         "{output_dir}/logs/compute_loh.{case}.{somatic}_{normal}.log",
     shell:
         "bash {params.scripts_dir}/get_allele_freqs.bash {input.normbam} {input.sombam}"
-        " {params.genome} {params.array_positions}"
+        " {input.genome} {params.array_positions}"
         " {output.folder}"
         " &> {log}"
 
@@ -414,7 +414,7 @@ rule process_loh:
     log:
         "{output_dir}/logs/process_loh.{case}.{somatic}_{normal}.log",
     shell:
-        "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh[1]}"
+        "awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}' {input.loh}"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
         " | bedtools sort -i stdin"
         " | Rscript {params.scripts_dir}/merge_loh.R -l STDIN -w {input.window} -o {output}"
@@ -440,7 +440,7 @@ rule getgc:
     log:
         "{output_dir}/logs/getgc.{case}.{somatic}_{normal}.log",
     shell:
-        "bedtools nuc -fi {params.genome} -bed {input} | cut -f1,2,3,5 | tail -n +2 > {output}"
+        "bedtools nuc -fi {input.genome} -bed {input.window} | cut -f1,2,3,5 | tail -n +2 > {output}"
         " 2> {log}"
         " && ls -l {output} >> {log}"
 
@@ -449,8 +449,8 @@ rule mergedbed:
     """Merge all the data into a single file"""
     input:
         gc=rules.getgc.output,
-        tumour="{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed"",
-        normal="{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed"",
+        tumour="{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed",
+        normal="{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed",
         loh=rules.process_loh.output,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed"),
@@ -464,7 +464,7 @@ rule mergedbed:
     log:
         "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
     shell:
-        "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc})
+        "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc})"
         "| sed 's/chr//g' > {output}" ## Cuts out any "chr" if using hg38
         " 2> {log}"
         " && ls -l {output} >> {log}"
@@ -473,7 +473,7 @@ rule mergedbed:
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
-        temp_dir + "{case}/{somatic}_{normal}/merged.bed",
+        "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
         rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
             "install_ploidetect"
         ] else __file__,
@@ -516,10 +516,10 @@ rule ploidetect:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
     container:
-        "docker://lculibrk/ploidetect:devel"
+        "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
-        cyto_arg = cyto_arg.
+        cyto_arg = cyto_arg,
     log:
         "{output_dir}/logs/ploidetect.{case}.{somatic}_{normal}.log",
     shell:
@@ -543,7 +543,7 @@ rule ploidetect_copynumber:
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect:devel"
+        "docker://lculibrk/ploidetect"
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
@@ -554,6 +554,6 @@ rule ploidetect_copynumber:
         "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
     shell:
         "Rscript {params.scripts_dir}/ploidetect_copynumber.R"
-        " -i {input.segs} -m {input.models}"
+        " -i {input.rds} -m {input.models}"
         " -p {output.cna_plots} -o {output.cna} {params.cyto_arg}"
         " &> {log}"

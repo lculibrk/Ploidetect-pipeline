@@ -27,11 +27,12 @@ args = docopt(doc)
 all_data = read.table(args$input, header = F, sep = "\t", skip = 1, stringsAsFactors = F)
 #
 # cytoband
-if(cyto %in% names(args)){
+if("cyto" %in% names(args)){
     cytos = args$cyto
 }else{
     cytos = F
 }
+print(cytos)
 #
 # preprocess data
 out = ploidetect_presegment(all_data, centromeres = cytos)

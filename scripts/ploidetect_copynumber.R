@@ -1,4 +1,4 @@
-B#! /usr/bin/env Rscript
+#! /usr/bin/env Rscript
 # ploidetect_copynumber.R
 #
 # Runs Ploidetect's copy number caller on Ploidetect-preprocessed input data using Ploidetect's tumor purity/ploidy estimates
@@ -42,7 +42,7 @@ in_rds = readRDS(args$input)
 in_models = read.table(file = args$models, sep = "\t", stringsAsFactors=F, header = T)
 #
 # Load centromere positions
-if(cyto %in% names(args)){
+if("cyto" %in% names(args)){
 	cytobands = fread(args$cyto)
 }else{
 	cytobands = F
