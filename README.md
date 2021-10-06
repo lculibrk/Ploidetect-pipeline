@@ -30,7 +30,7 @@ This section will break down how to set it all up.
 
 #### 1.1.1: Specifying your samples
 
-In the config/samples.yaml you will find the following lines:
+In the `config/samples.yaml` you will find the following lines:
 
  
 ```
@@ -74,7 +74,7 @@ Next we specify the genome name in the config.
 genome_name: "hg19"
 ```
 
-Change the "hg19" in quotations to whatever you're using.
+Change the `"hg19"` in quotations to whatever you're using.
 
 We also allow you to specify custom cytobands if you are not using hg19 or hg38, or if you want to use a different annotation than those on UCSC. 
 
@@ -104,9 +104,9 @@ ploidetect_local_clone:
 
 #### 1.1.4: Sequence type
 We've recently added support for oxford nanopore data. Specify here whether your data are from short reads (Illumina, BGI) using `short` or from long reads (Oxford nanopore) using `ont`. While we don't foresee issues with using Pacific Biosciences data, it has not been tested. 
-
+```
 sequence_type: "short"
-
+```
 #### 1.1.5: Supporting custom genomes
 
 Currently, we support hg19 and hg38 without requiring any user-specified files. Genomes hosted on UCSC aside from hg19 and hg38 are compatible, requiring only a few files from the user. If you are using hg19 or hg38, but would like to use your own versions of these files, you may also specify them here. By default the workflow will use packaged files (SNP positions) or UCSC data (fasta and cytoband annotations). 
