@@ -206,8 +206,8 @@ rule germline_cov:
     params:
         scripts_dir=scripts_dir,
         threshold=config["window_threshold"],
-        qual = nanopore_handling()["qual"],
-        maxd = nanopore_handling()["maxd"]
+        qual = config[config["sequence_type"]]["qual"],
+        maxd = config[config["sequence_type"]]["maxd"]
     log:
         "{output_dir}/logs/germline_cov.{case}.{normal}.{chr}.log",
     shell:
@@ -297,8 +297,8 @@ rule genomecovsomatic:
         cpus=1,
         mem_mb=MEM_PER_CPU
     params: 
-        qual = nanopore_handling()["qual"],
-        maxd = nanopore_handling()["maxd"]
+        qual = config[config["sequence_type"]]["qual"],
+        maxd = config[config["sequence_type"]]["maxd"]
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]} "
         " | awk -v FS='\\t' -v OFS='\\t' \'{{print $1, $2, $2 + 1, $3}}\'"
@@ -320,8 +320,8 @@ rule genomecovgermline:
         cpus=1,
         mem_mb=MEM_PER_CPU,
     params: 
-        qual = nanopore_handling()["qual"],
-        maxd = nanopore_handling()["maxd"]
+        qual = config[config["sequence_type"]]["qual"],
+        maxd = config[config["sequence_type"]]["maxd"]
     log:
         "{output_dir}/logs/genomecovsomatic.{case}.{somatic}_{normal}.{chr}.log"
     shell:
