@@ -86,6 +86,11 @@ output_list = []
 for sample in sample_ids:
     somatics = bams_dict[sample]["somatic"].keys()
     normals = bams_dict[sample]["normal"].keys()
+    ## Check that the bams are findable
+    concat_bams = somatics + normals
+    for bam in concat_bams:
+        if not os.path.exists(bam):
+            raise WorkflowSetupError(f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity")
     combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
     outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
     output_list.extend(outs)
@@ -137,9 +142,11 @@ rule ploidetect_install:
         "conda_configs/r.yaml"
     params:
         devtools_install(),
+    log:
+        "{output_dir}/logs/ploidetect_install.log"
     shell:
         "export LC_ALL=en_US.UTF-8; "
-        " Rscript -e {params} "
+        " Rscript -e {params} > {log}"
         " && echo {params} > {output} && date >> {output}"
 
 
