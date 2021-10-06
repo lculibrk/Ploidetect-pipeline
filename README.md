@@ -16,33 +16,21 @@ cd ./Ploidetect-pipeline/
 
   
 
-### 1.1: The CONFIG.txt
+### 1.1: The configuration files
 
   
 
-The CONFIG.txt is a `yaml`-formatted file which specifies a number of things required for running the Ploidetect workflow:
+Under `config/` are three `yaml`-formatted files which specify some default settings, run parameters, and sample information.
 
   
 
-- The sample names, library names, and paths to the bam files
-
-- The genome version
-
-- Chromosome names
-
-- Sequence type
-
-- Dependency handling
-
-  
-
-This section will break down how to set it up.
+This section will break down how to set it all up.
 
   
 
 #### 1.1.1: Specifying your samples
 
-In the CONFIG.txt you will find the following lines:
+In the `config/samples.yaml` you will find the following lines:
 
  
 ```
@@ -72,108 +60,78 @@ Let's break down this entry further, line-by-line.
 
   
 
-This sounds a bit annoying, but it's not too bad once you've done it once or twice. If you have a ton of samples we would recommend writing some script to create this automatically and `cat` it into a CONFIG.txt without the `bams` section.
+This sounds a bit annoying, but it's not too bad once you've done it once or twice. If you have a ton of samples we would recommend writing some script to create this automatically. In the future we plan to include a script to generate this from a tab-separated file.
 
+
+#### 1.1.2: Genome version considerations
+
+We're moving on to the `config/parameters.yaml` section
+
+Next we specify the genome name in the config.
   
-  
-
-#### 1.1.2: Specifying the hg version
-
-  
-
-Next there's the genome name section, so change it to match the genome name. So far only hg19 and hg38 are officially supported, but general-genome support is in the works.
-
-  
-
 ```
-
 # genome_name should match bams
-genome_name:
-    "hg19"
-
+genome_name: "hg19"
 ```
 
-  
+Change the `"hg19"` in quotations to whatever you're using.
 
-Change the "hg19" in the quotations to whatever you're using.
+We also allow you to specify custom cytobands if you are not using hg19 or hg38, or if you want to use a different annotation than those on UCSC. 
 
-  
+```
+cyto_path: auto
+```
+
+Leave this on "auto" if using hg19 or hg38. If you'd like to use custom cytobands, this must point to a tab-separated file with five columns: chromosome, start, end, band name, and band annotation. Column names are optional. 
 
 #### 1.1.3: Ploidetect version
 
 This only applies if you're not running the pipeline with `--use-singularity` (to be explained).
 
-  
-
-Specify the version name of Ploidetect to use from the [github repo](https://github.com/lculibrk/Ploidetect) in the `ploidetect_ver` entry. Here we chose v1.0.0 (effectively the paper version), although we've gone up to v1.2.2 so far. If you have a local clone on your filesystem, you can specify that using `ploidetect_local_clone`. If you don't have a clone, leave it blank (i.e. the line should simply read `ploidetect_local_clone: `)
+Specify the version name of Ploidetect to use from the [github repo](https://github.com/lculibrk/Ploidetect) in the `ploidetect_ver` entry. Here we chose v1.3.0 (latest version). If you have a local clone on your filesystem, you can specify that using `ploidetect_local_clone`. If you don't have a clone, leave it blank (i.e. the line should simply read `ploidetect_local_clone: `). You can also specify a commit id, such as the one in the paper. 
 
   
 
 ```
 
-# ploidetect_ver should be a branch or tag. Overriden by ploidetect_local_clone.
-ploidetect_ver: v1.0.0
+# ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
+ploidetect_ver: v1.3.0
+
 # Leave ploidetect_local_clone blank or 'None' to download from github
-ploidetect_local_clone: /gsc/pipelines/Ploidetect/{ploidetect_ver}
+ploidetect_local_clone: 
 
 ```
 
-  
-
-#### 1.1.4: Conda or singularity?
-
-  
-
-If running the pipeline with `--use-singularity`, set this to 0. Otherwise set it to 1. This option exists because we cannot `conda install` the Ploidetect package, so this flag tells the workflow whether it needs to install the R package itself or not. If we're using singularity, the package is already installed in the container.
-
-  
-
+#### 1.1.4: Sequence type
+We've recently added support for oxford nanopore data. Specify here whether your data are from short reads (Illumina, BGI) using `short` or from long reads (Oxford nanopore) using `ont`. While we don't foresee issues with using Pacific Biosciences data, it has not been tested. 
 ```
-# are we using docker?
-install_ploidetect: 0
+sequence_type: "short"
+```
+#### 1.1.5: Supporting custom genomes
+
+Currently, we support hg19 and hg38 without requiring any user-specified files. Genomes hosted on UCSC aside from hg19 and hg38 are compatible, requiring only a few files from the user. If you are using hg19 or hg38, but would like to use your own versions of these files, you may also specify them here. By default the workflow will use packaged files (SNP positions) or UCSC data (fasta and cytoband annotations). 
+
+If you are using a non-hg19/38 genome, you must include these lines in the config:
+  
+```
+array_positions:
+    genome_name:
+        /path/to/snp/positions.txt
 ```
 
-We recommend using singularity to handle the dependencies. This will be explained in section 1.2.
-  
+This file must be formatted as the files under `resources/snp_arrays/*/SNP_array_positions.txt`, and include the positions of known SNPs in your genome. We used about 200,000 SNP positions to develop and benchmark Ploidetect. Your mileage may vary if you use a different number relative to the length of your genome.
 
-#### 1.1.5: hgver-specific files
-
-  
-
-The next lines are file dependencies that are needed for running the workflow. Currently the `genome` section is probably the only one you have to touch. `annotation` is used for the BCGSC (our institution)-specific module in `Snakefile.gsc.smk`, and the `array_positions` files are included with the repository. 
-
-  
+Next, specify a path to your genome fasta file. The directory of the fasta must also contain the fasta index (.fai). You can generate this using `samtools faidx`, for example.
 
 ```
 genome:
-    hg19:
-        /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
-    hg38:
-        /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
-annotation:
-    hg19:
-        /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
-    hg38:
-        /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
-array_positions:
-    hg19:
-        resources/snp_arrays/hg19/SNP_array_positions.txt
-    hg38:
-        resources/snp_arrays/hg38/SNP_array_positions.txt
+    genome_name:
+        /path/to/genome/fasta.fa
 ```
-
   
-
-Under `genome`, select your hg-ver and specify the path (relative or absolute) to the genome fasta file. The fasta index (.fai) must also be there. You can create this using `samtools faidx`, for example.
-
+Finally, you must specify the chromosomes to be analyzed. For hg19 and hg38, this defaults to chr1-22 + X. Below is an example of the default hg19 chromosome configuration. The chromosome names must match the .bam that you use. 
   
-
-The final section deals with chromosome names:
-
-  
-
 ```
-
 chromosomes:
  - 1
  - 2
@@ -199,22 +157,6 @@ chromosomes:
  - 22
  - X
 ```
-
-  
-
-This is fairly self-explanatory. If your chosen bams use "chr" prefixes, add them to these lines. e.g.
-
-  
-
-```
-
-chromosomes:
- - chr1
- - chr2
- - etc
-
-```
-
   
 
 Once the config has been dealt with, we then handle dependencies.

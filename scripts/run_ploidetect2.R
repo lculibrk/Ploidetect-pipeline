@@ -1,22 +1,24 @@
+#! /usr/bin/env Rscript
 # run_ploidetect2.R
 #
 # runs Ploidetect's tumor purity and ploidy caller on preprocessed output
 #
 # Takes input .RDS from prep_ploidetect2.R and performs tumor purity and ploidy
-# calling. Outputs a tab-separated file containing purity/ploidy models and a 
+# calling. Outputs a tab-separated file containing purity/ploidy models and a
 # pdf containing a plot of the data distribution and a plot for each model
 #
 # docopt script docstring
 ' run_ploidetect2.R
 
 Usage: 
-run_ploidetect2.R -i input -p plots.pdf -r rds.rds -o output.txt
+run_ploidetect2.R -i input -p plots.pdf -r rds.rds -o output.txt [-c cyto]
 
 Options:
 -i --input input      input .RDS data file
 -p --plots plots      output plots file
 -o --output output    output file
 -r --rds rds	      output .RDS
+-c --cytos cytos      cytobands file
 ' -> doc
 # load libraries
 library(docopt)
@@ -28,6 +30,7 @@ args = docopt(doc)
 #
 # show the script call as run
 print(paste0("run_ploidetect2.R -i ", args$input, " -p ", args$plots, " -r ", args$rds, " -o ", args$output))
+print(paste0("Running Ploidetect version: ", packageVersion("Ploidetect")))
 #
 # Read input data .RDS file
 in_list = readRDS(args$input)
