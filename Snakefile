@@ -85,9 +85,11 @@ output_list = []
 ## Loop over the bams and construct lib comparisons
 for sample in sample_ids:
     somatics = bams_dict[sample]["somatic"].keys()
+    somatic_paths = bams_dict[sample]["somatic"].values()
     normals = bams_dict[sample]["normal"].keys()
+    normal_paths = bams_dict[sample]["normal"].values()
     ## Check that the bams are findable
-    concat_bams = somatics + normals
+    concat_bams = list(somatic_paths) + list(normal_paths)
     for bam in concat_bams:
         if not os.path.exists(bam):
             raise WorkflowSetupError(f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity")
@@ -141,12 +143,12 @@ rule ploidetect_install:
     conda:
         "conda_configs/r.yaml"
     params:
-        devtools_install(),
+        install_cmd = devtools_install(),
     log:
-        "{output_dir}/logs/ploidetect_install.log"
+        expand("{output_dir}/logs/ploidetect_install.log", output_dir = output_dir)
     shell:
         "export LC_ALL=en_US.UTF-8; "
-        " Rscript -e {params} > {log}"
+        " Rscript -e {params.install_cmd} > {log}"
         " && echo {params} > {output} && date >> {output}"
 
 
