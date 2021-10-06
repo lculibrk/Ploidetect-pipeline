@@ -13,8 +13,9 @@ print(f"Ploidetect-pipeline {VERSION}")
 
 
 ## Load config values
-configfile: os.path.join(workflow.basedir, "defaults.yaml")
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
+configfile: os.path.join(workflow.basedir, "config/samples.yaml")
+configfile: os.path.join(workflow.basedir, "config/parameters.yaml")
 
 MEM_PER_CPU = config["mem_per_cpu"]
 
@@ -48,6 +49,8 @@ if genome_path == "failed":
         genome_path = f"resources/{hgver}/genome.fa"
     else:
         raise(WorkflowSetupError("Genome fasta file not found in config or on UCSC. Specify a path to your genome fasta"))
+
+
 
 output_dir = config["output_dir"]
 
@@ -474,9 +477,7 @@ rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
         "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
-        rules.ploidetect_install.output if not workflow.use_singularity and "install_ploidetect" in config.keys() and config[
-            "install_ploidetect"
-        ] else __file__,
+        rules.ploidetect_install.output if workflow.use_conda and not workflow.use_singularity else __file__,
         cytos=cyto_path,
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
