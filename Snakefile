@@ -179,7 +179,7 @@ rule download_genome:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect:devel"
+        "docker://lculibrk/ploidetect"
     shell:
         "gunzip -c {input} > {output[0]}; samtools faidx {output[0]}"
 
