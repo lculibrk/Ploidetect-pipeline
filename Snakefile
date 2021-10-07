@@ -97,11 +97,6 @@ for sample in sample_ids:
     outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
     output_list.extend(outs)
 
-def nanopore_handling():
-    if config["sequence_type"] == "ont":
-        return {"maxd":500, "qual":10}
-    else:
-        return {"maxd":0,   "qual":50}
 
 
 print(f"Final outputs: {output_list}")
