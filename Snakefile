@@ -63,6 +63,22 @@ array_positions = (
     )
 )
 
+with open(array_positions) as f:
+    snp_positions = f.readlines()
+    snp_positions = [snp.strip().split("\t") for snp in snp_positions]
+    snp_chrs = [line[0] for line in snp_positions]
+    snp_chrs = list(set(snp_chrs))
+    for chromosome in chromosomes:
+        if str(chromosome) not in snp_chrs:
+            raise(WorkflowSetupError(f"Chromosome {chromosome} specified in config was not found in provided snp position data"))
+    lens = [len(line) for line in snp_positions]
+    print(lens[0])
+    if any(leng > 2 for leng in lens):
+        raise(WorkflowSetupError("More than two columns detected in snp position data - file must contain only chromosome and position columns"))
+    
+
+
+
 cyto_path = config["cyto_path"] if "cyto_path" in config else ""
 if cyto_path == "auto":
     ## Try to automatically get cytobands based on genome name
@@ -96,8 +112,6 @@ for sample in sample_ids:
     combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
     outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
     output_list.extend(outs)
-
-
 
 print(f"Final outputs: {output_list}")
 
