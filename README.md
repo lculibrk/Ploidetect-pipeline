@@ -30,6 +30,16 @@ This section will break down how to set it all up.
 
 #### 1.1.1: Specifying your samples
 
+The simplest way to specify your samples is by providing a tab-separated file with the sample information. You can find an example of this file under config/sample_tsv.tsv. You can then use this file to generate a config compatible with the Ploidetect workflow:
+
+```
+python3 scripts/sampletsvtoyaml.py --tsv_file=/path/to/sample_tsv.tsv -o config/ -c False
+```
+
+The `-c` option allows you to specify whether you should create a new file from the tsv, or to add the sample information to an existing samples file. Once this is done, proceed to the next section
+
+If you'd rather do it manually, below are instructions for manually setting up your samples.yaml file. 
+
 In the `config/samples.yaml` you will find the following lines:
 
  
@@ -58,9 +68,21 @@ Let's break down this entry further, line-by-line.
 
 - `/projects/yadda/yadda.bam` is the **path to the bam file** for the somatic and normal libraries. Under `somatic:` you will enter `libraryname: /path/to/the/somatic/bam/file.bam`, and do the same for the normal bam under `normal:`.
 
-  
+If you have multiple samples to run, add them as new lines, following the existing formatting. So after adding another sample, the config might look like this:
 
-This sounds a bit annoying, but it's not too bad once you've done it once or twice. If you have a ton of samples we would recommend writing some script to create this automatically. In the future we plan to include a script to generate this from a tab-separated file.
+```
+bams:
+    COLO829-TestA:
+        somatic:
+            A36971: /projects/POG/POG_data/COLO829-TestA/wgs/biop1_t_A36971/merge/hg19a_bwa-mem-0.7.6a/A36971_2_lanes_dupsFlagged.bam
+        normal:
+            A36973: /projects/POG/POG_data/COLO829-TestA/wgs/blood1_n_A36973/merge/hg19a_bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam
+    sample_2:
+        somatic:
+            A12345: /path/to/somatic.bam
+        normal:
+            A54321: /path/to/normal.bam
+```
 
 
 #### 1.1.2: Genome version considerations
