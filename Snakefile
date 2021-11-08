@@ -112,7 +112,8 @@ for sample in sample_ids:
 #        if not os.path.exists(bam):
 #            #raise WorkflowSetupError(f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity")
     combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
-    outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
+    #outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
+    outs = [os.path.join(output_dir, "scratch", comb, "merged.bed") for comb in combinations]
     output_list.extend(outs)
 
 print(f"Final outputs: {output_list}")
@@ -541,7 +542,7 @@ rule mergedbed:
         normal="{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed",
         loh=rules.process_loh.output,
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed"),
+        "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
