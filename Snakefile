@@ -113,23 +113,14 @@ for sample in sample_ids:
 #            #raise WorkflowSetupError(f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity")
     combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
     #outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
-    outs = [os.path.join(output_dir, "scratch", comb, "merged.bed") for comb in combinations]
+    outs = [os.path.join(output_dir, "scratch", sample, comb, "merged.bed") for comb in combinations]
     output_list.extend(outs)
 
 print(f"Final outputs: {output_list}")
 
 rule all:
     input:
-        [
-            expand(
-                "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
-                output_dir=output_dir,
-                case=case,
-                somatic=config["bams"][case]["somatic"].keys(),
-                normal=config["bams"][case]["normal"].keys(),
-            )
-            for case in config["bams"].keys()
-        ],
+        output_list
 
 
 def devtools_install():
@@ -365,9 +356,8 @@ rule genomecovsomatic:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovsomatic{chr}.txt"
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]} "
-        " | awk -v FS='\\t' -v OFS='\\t' \'{{print $1, $2, $2 + 1, $3}}\'"
         " | sort -k1,1 -k2,2n "
-        " | bedtools map -b stdin -a {input.window} -c 4 -o mean > {output}"
+        " | python3 scripts/summarize_counts.py - {input.window} > {output}"
 
         
 rule genomecovgermline:
@@ -393,9 +383,8 @@ rule genomecovgermline:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovgermline{chr}.txt"
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]}"
-        " | awk -v FS='\\t' -v OFS='\\t' \'{{print $1, $2, $2 + 1, $3}}\'"
-        " | sort -k1,1 -k2,2n"
-        " | bedtools map -b stdin -a {input.window} -c 4 -o mean > {output}"
+        " | sort -k1,1 -k2,2n "
+        " | python3 scripts/summarize_counts.py - {input.window} > {output}"
 
         
 rule merge_split_tumour:
