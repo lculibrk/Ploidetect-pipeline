@@ -1,7 +1,7 @@
 ### Genome version considerations
 
 # genome_name should match bams
-genome_name: "hg19"
+genome_name: "hg38"
 
 # Are we using custom cytobands? put "none" to disable cytoband filtering (not recommended)
 cyto_path: auto

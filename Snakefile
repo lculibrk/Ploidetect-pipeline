@@ -11,7 +11,6 @@ from constants import WorkflowSetupError
 
 print(f"Ploidetect-pipeline {VERSION}")
 
-
 ## Load config values
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
 configfile: os.path.join(workflow.basedir, "config/samples.yaml")
@@ -102,31 +101,32 @@ output_list = []
 for sample in sample_ids:
     somatics = bams_dict[sample]["somatic"].keys()
     somatic_paths = bams_dict[sample]["somatic"].values()
-    normals = bams_dict[sample]["normal"].keys()
-    normal_paths = bams_dict[sample]["normal"].values()
-    ## Check that the bams are findable
-    concat_bams = list(somatic_paths) + list(normal_paths)
-    for bam in concat_bams:
-        if not os.path.exists(bam):
-            raise WorkflowSetupError(f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity")
-    combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
-    outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
-    output_list.extend(outs)
+    if "normal" in bams_dict[sample]:
+        normals = bams_dict[sample]["normal"].keys()
+        normal_paths = bams_dict[sample]["normal"].values()
+        ## Check that the bams are findable
+        concat_bams = list(somatic_paths) + list(normal_paths)
+        for bam in concat_bams:
+            if not os.path.exists(bam):
+                raise WorkflowSetupError(f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity")
+        combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
+        outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
+        output_list.extend(outs)
+    else:
+        concat_bams = list(somatic_paths)
+        for bam in concat_bams:
+            if not os.path.exists(bam):
+                raise WorkflowSetupError(f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity")
+        outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in somatics]
+        output_list.extend(outs)
+
+include: "single_sample.smk"
 
 print(f"Final outputs: {output_list}")
 
 rule all:
     input:
-        [
-            expand(
-                "{output_dir}/{case}/{somatic}_{normal}/cna.txt",
-                output_dir=output_dir,
-                case=case,
-                somatic=config["bams"][case]["somatic"].keys(),
-                normal=config["bams"][case]["normal"].keys(),
-            )
-            for case in config["bams"].keys()
-        ],
+        output_list
 
 
 def devtools_install():
@@ -310,6 +310,8 @@ rule genomecovsomatic:
     params: 
         qual = config[config["sequence_type"]]["qual"],
         maxd = config[config["sequence_type"]]["maxd"]
+    wildcard_constraints:
+        soamtic="[^_]*"
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]} "
         " | awk -v FS='\\t' -v OFS='\\t' \'{{print $1, $2, $2 + 1, $3}}\'"
@@ -443,6 +445,7 @@ rule process_loh:
         " && ls -l {output} >> {log}"
 
 
+
 rule getgc:
     """Get GC content for each bin"""
     input:
@@ -490,15 +493,14 @@ rule mergedbed:
         " 2> {log}"
         " && ls -l {output} >> {log}"
 
-
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
-        "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
+        "{output_dir}/scratch/{case}/{libs}/merged.bed",
         rules.ploidetect_install.output if workflow.use_conda and not workflow.use_singularity else __file__,
         cytos=cyto_path,
     output:
-        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
+        "{output_dir}/{case}/{libs}/segmented.RDS",
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
@@ -509,7 +511,7 @@ rule preseg:
     params:
         scripts_dir=scripts_dir,
     log:
-        "{output_dir}/logs/preseg.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/preseg.{case}.{libs}.log",
     shell:
         "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -c {input.cytos} -o {output}"
 
@@ -526,9 +528,9 @@ rule ploidetect:
             else __file__
         )
     output:
-        plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
-        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
-        meta="{output_dir}/{case}/{somatic}_{normal}/meta.RDS",
+        plots="{output_dir}/{case}/{libs}/plots.pdf",
+        models="{output_dir}/{case}/{libs}/models.txt",
+        meta="{output_dir}/{case}/{libs}/meta.RDS",
     conda:
         "conda_configs/r.yaml"
     resources:
@@ -540,7 +542,7 @@ rule ploidetect:
         scripts_dir=scripts_dir,
         cyto_arg = cyto_arg,
     log:
-        "{output_dir}/logs/ploidetect.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/ploidetect.{case}.{libs}.log",
     shell:
         "Rscript {params.scripts_dir}/run_ploidetect2.R "
         " -i {input.preseg} "
@@ -552,13 +554,13 @@ rule ploidetect_copynumber:
     """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
     input:
         cytos=cyto_path,
-        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
-        rds="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
-        plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
+        models="{output_dir}/{case}/{libs}/models.txt",
+        rds="{output_dir}/{case}/{libs}/segmented.RDS",
+        plots="{output_dir}/{case}/{libs}/plots.pdf",
     output:
-        cna="{output_dir}/{case}/{somatic}_{normal}/cna.txt",
-        cna_plots="{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
-        cna_cond="{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
+        cna="{output_dir}/{case}/{libs}/cna.txt",
+        cna_plots="{output_dir}/{case}/{libs}/cna_plots.pdf",
+        cna_cond="{output_dir}/{case}/{libs}/cna_condensed.txt",
     conda:
         "conda_configs/r.yaml"
     container:
@@ -570,7 +572,7 @@ rule ploidetect_copynumber:
         scripts_dir=scripts_dir,
         cyto_arg = cyto_arg,
     log:
-        "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
+        "{output_dir}/logs/ploidetect_copynumber.{case}.{libs}.log",
     shell:
         "Rscript {params.scripts_dir}/ploidetect_copynumber.R"
         " -i {input.rds} -m {input.models}"
