@@ -484,7 +484,7 @@ rule split_positions:
     log:
         "{output_dir}/logs/split_array_{chr}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{normal}/splitwindowfile{chr}.txt"
+        "{output_dir}/benchmark/splitpositions{chr}.txt"
     shell:
         "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
         " 2> {log}"
