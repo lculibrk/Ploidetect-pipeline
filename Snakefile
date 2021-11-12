@@ -584,7 +584,7 @@ rule concat_bafs:
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/concat_bafs.txt"
     shell:
-        "cat {input} > {output]"
+        "cat {input} > {output}"
     
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
