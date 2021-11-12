@@ -473,7 +473,7 @@ rule split_positions:
     input:
         array_positions
     output:
-        "{output_dir}/scratch/split_array/{chr}.txt"
+        temp("{output_dir}/scratch/split_array/{chr}.txt")
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -538,7 +538,7 @@ rule positions:
 
 rule bafs:
     input:
-        positions="{output_dir}/scratch/{case}/{normal}/{chr}.positions"
+        positions="{output_dir}/scratch/{case}/{normal}/{chr}.positions",
         sombam="{output_dir}/scratch/{case}/{somatic}/somatic.cram",
         soi="{output_dir}/scratch/{case}/{somatic}/somatic.cram.crai",
         genome=genome_path,
