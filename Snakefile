@@ -468,11 +468,126 @@ rule compute_loh:
         " {output.folder}"
         " &> {log}"
 
+rule split_positions:
+    """Split the array positions file by chromosome for parallel processing"""
+    input:
+        array_positions
+    output:
+        "{output_dir}/scratch/split_array/{chr}.txt"
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/split_array_{chr}.log",
+    benchmark:
+        "{output_dir}/benchmark/{case}/{normal}/splitwindowfile{chr}.txt"
+    shell:
+        "awk -v FS='\t' -v OFS='\t' '$1 == \"{wildcards.chr}\"{{print $0}}' {input} > {output}"
+        " 2> {log}"
+        " && ls -l {output} >> {log}"
 
+rule pileup_normal:
+    """Compute an mpileup for each chromosome from germline"""
+    input:
+        normbam="{output_dir}/scratch/{case}/{normal}/normal.cram",
+        nori="{output_dir}/scratch/{case}/{normal}/normal.cram.crai",
+        array_positions="{output_dir}/scratch/split_array/{chr}/txt"
+    output:
+        pileup=temp("{output_dir}/scratch/{case}/{normal}/pileup_{chr}.bcf")
+    params:
+        scripts_dir=scripts_dir,
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/pileup_normal.{case}.{normal}.log",
+    benchmark:
+        "{output_dir}/benchmark/{case}/{normal}/pileup_normal.txt"
+    shell:
+        "samtools mpileup {input.normbam} -l {input.array_positions} -f {input.genome} -v -B > {output.pileup}"
+    
+rule positions:
+    """Get variant positions from normal"""
+    input:
+        pileup="{output_dir}/scratch/{case}/{normal}/pileup_{chr}.bcf"
+    output:
+        positions=temp("{output_dir}/scratch/{case}/{normal}/{chr}.positions")
+    params:
+        scripts_dir=scripts_dir,
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/pileup_normal.{case}.{normal}.log",
+    benchmark:
+        "{output_dir}/benchmark/{case}/{normal}/pileup_normal.txt"
+    shell:
+        "bcftools call -c {input} | grep '0/1' | cut -f1,2 > {output}"
+
+rule bafs:
+    input:
+        positions="{output_dir}/scratch/{case}/{normal}/{chr}.positions"
+        sombam="{output_dir}/scratch/{case}/{somatic}/somatic.cram",
+        soi="{output_dir}/scratch/{case}/{somatic}/somatic.cram.crai",
+        genome=genome_path,
+    output:
+        loh=temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh/split/{chr}.txt")
+    params:
+        scripts_dir=scripts_dir,
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/bafs.{case}.{somatic}_{normal}_{chr}.log",
+    benchmark:
+        "{output_dir}/benchmark/{case}/{somatic}_{normal}/bafs_{chr}.txt"
+    shell:
+        "samtools mpileup {input.sombam} -l {input.positions} -f $3 -B "
+        " | awk -v OFS=\"\\t\" 'BEGIN{a=0;t=0;c=0;g=0;wt=0}{seq=tolower($5);a=gsub(\"a\", \"a\", seq);t=gsub(\"t\", \"t\", seq);c=gsub(\"c\",\"c\",seq);g=gsub(/g/,\"\",seq);wt=gsub(\"\\.|\\,\", \"\", seq);print $1, $2, $3, $4, a, t, c, g, wt}' "
+        " | cat <(echo -e \"chr\tpos\tref\tcov\ta\tt\tc\tg\twt\") - | awk 'NR == 1 {sep=\"\\t\";for (i = 5; i <= 8; i++) bases[i] = $i;next};{sep=\"\t\";max = $5;max_ind=5;for (i = 5; i <= 8; i++) if ($i > max) {max = $i; max_ind=i};printf \"%s%s%s%s%s%s%s%s%s%s%s\", $1, sep, $2, sep, toupper($3), sep, $9, sep, toupper(bases[max_ind]), sep, max;printf \"%s\", \"\\n\"}'"
+        " > {output.loh}"
+
+rule concat_bafs:
+    input:
+        expand("{{output_dir}}/scratch/{{case}}/{{somatic}}_{{normal}}/loh/split/{chr}.txt", chr = chromosomes)
+    output:
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/bafs.txt")
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    params:
+        scripts_dir=scripts_dir,
+    log:
+        "{output_dir}/logs/concat_bafs.{case}.{somatic}_{normal}.log",
+    benchmark:
+        "{output_dir}/benchmark/{case}/{somatic}_{normal}/concat_bafs.txt"
+    shell:
+        "cat {input} > {output]"
+    
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
-        loh=rules.compute_loh.output.loh,
+        loh=rules.concat_bafs.output,
         window=rules.makewindowfile.output
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh.bed"),
