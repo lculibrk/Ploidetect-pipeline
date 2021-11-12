@@ -518,7 +518,7 @@ rule getgc:
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/getgc.txt"
     shell:
-        "python3 scripts/stream_gc {input.genome} {input.window} > {output}"
+        "python3 scripts/stream_gc.py {input.genome} {input.window} > {output}"
         " 2> {log}"
         " && ls -l {output} >> {log}"
 
