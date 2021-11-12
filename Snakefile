@@ -518,7 +518,7 @@ rule getgc:
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/getgc.txt"
     shell:
-        "bedtools nuc -fi {input.genome} -bed {input.window} | cut -f1,2,3,5 | tail -n +2 > {output}"
+        "python3 scripts/stream_gc {input.genome} {input.window} > {output}"
         " 2> {log}"
         " && ls -l {output} >> {log}"
 
