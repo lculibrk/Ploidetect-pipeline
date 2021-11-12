@@ -530,9 +530,9 @@ rule positions:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/pileup_normal.{case}.{normal}.log",
+        "{output_dir}/logs/pileup_normal.{case}.{normal.{chr}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{normal}/pileup_normal.txt"
+        "{output_dir}/benchmark/{case}/{normal}/positions_{chr}.txt"
     shell:
         "bcftools call -c {input} | grep '0/1' | cut -f1,2 > {output}"
 
