@@ -508,9 +508,9 @@ rule pileup_normal:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/pileup_normal.{case}.{normal}.log",
+        "{output_dir}/logs/pileup_normal.{case}.{normal}.{chr}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{normal}/pileup_normal.txt"
+        "{output_dir}/benchmark/{case}/{normal}/pileup_normal_{chr}.txt"
     shell:
         "samtools mpileup {input.normbam} -l {input.array_positions} -f {input.genome} -v -B > {output.pileup}"
     
