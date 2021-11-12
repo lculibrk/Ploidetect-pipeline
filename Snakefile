@@ -560,8 +560,9 @@ rule bafs:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/bafs_{chr}.txt"
     shell:
         "samtools mpileup {input.sombam} -l {input.positions} -f $3 -B "
-        " | awk -v OFS=\"\\t\" 'BEGIN{a=0;t=0;c=0;g=0;wt=0}{seq=tolower($5);a=gsub(\"a\", \"a\", seq);t=gsub(\"t\", \"t\", seq);c=gsub(\"c\",\"c\",seq);g=gsub(/g/,\"\",seq);wt=gsub(\"\\.|\\,\", \"\", seq);print $1, $2, $3, $4, a, t, c, g, wt}' "
-        " | cat <(echo -e \"chr\tpos\tref\tcov\ta\tt\tc\tg\twt\") - | awk 'NR == 1 {sep=\"\\t\";for (i = 5; i <= 8; i++) bases[i] = $i;next};{sep=\"\t\";max = $5;max_ind=5;for (i = 5; i <= 8; i++) if ($i > max) {max = $i; max_ind=i};printf \"%s%s%s%s%s%s%s%s%s%s%s\", $1, sep, $2, sep, toupper($3), sep, $9, sep, toupper(bases[max_ind]), sep, max;printf \"%s\", \"\\n\"}'"
+        " | awk -v OFS=\"\\t\" 'BEGIN{{a=0;t=0;c=0;g=0;wt=0}}{{seq=tolower($5);a=gsub(\"a\", \"a\", seq);t=gsub(\"t\", \"t\", seq);c=gsub(\"c\",\"c\",seq);g=gsub(/g/,\"\",seq);wt=gsub(\"\\.|\\,\", \"\", seq);print $1, $2, $3, $4, a, t, c, g, wt}}' "
+        " | cat <(echo -e \"chr\tpos\tref\tcov\ta\tt\tc\tg\twt\") - "
+        " | awk 'NR == 1 {{sep=\"\\t\";for (i = 5; i <= 8; i++) bases[i] = $i;next}};{{sep=\"\t\";max = $5;max_ind=5;for (i = 5; i <= 8; i++) if ($i > max) {{max = $i; max_ind=i}};printf \"%s%s%s%s%s%s%s%s%s%s%s\", $1, sep, $2, sep, toupper($3), sep, $9, sep, toupper(bases[max_ind]), sep, max;printf \"%s\", \"\\n\"}}'"
         " > {output.loh}"
 
 rule concat_bafs:
