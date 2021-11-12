@@ -530,7 +530,7 @@ rule positions:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/pileup_normal.{case}.{normal.{chr}.log",
+        "{output_dir}/logs/pileup_normal.{case}.{normal}.{chr}.log",
     benchmark:
         "{output_dir}/benchmark/{case}/{normal}/positions_{chr}.txt"
     shell:
