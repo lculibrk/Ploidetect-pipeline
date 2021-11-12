@@ -495,7 +495,7 @@ rule pileup_normal:
     input:
         normbam="{output_dir}/scratch/{case}/{normal}/normal.cram",
         nori="{output_dir}/scratch/{case}/{normal}/normal.cram.crai",
-        array_positions="{output_dir}/scratch/split_array/{chr}/txt"
+        array_positions="{output_dir}/scratch/split_array/{chr}.txt"
     output:
         pileup=temp("{output_dir}/scratch/{case}/{normal}/pileup_{chr}.bcf")
     params:
