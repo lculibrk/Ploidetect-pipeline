@@ -495,12 +495,12 @@ rule pileup_normal:
     input:
         normbam="{output_dir}/scratch/{case}/{normal}/normal.cram",
         nori="{output_dir}/scratch/{case}/{normal}/normal.cram.crai",
-        array_positions="{output_dir}/scratch/split_array/{chr}.txt",
         genome = genome_path,
     output:
-        pileup=temp("{output_dir}/scratch/{case}/{normal}/pileup_{chr}.bcf")
+        pileup=temp("{output_dir}/scratch/{case}/{normal}/pileup.bcf")
     params:
         scripts_dir=scripts_dir,
+        array_positions=array_positions,
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -509,18 +509,18 @@ rule pileup_normal:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/pileup_normal.{case}.{normal}.{chr}.log",
+        "{output_dir}/logs/pileup_normal.{case}.{normal}.log",
     benchmark:
         "{output_dir}/benchmark/{case}/{normal}/pileup_normal_{chr}.txt"
     shell:
-        "samtools mpileup {input.normbam} -l {input.array_positions} -f {input.genome} -v -B > {output.pileup}"
+        "samtools mpileup {input.normbam} -l {params.array_positions} -f {input.genome} -v -B > {output.pileup}"
     
 rule positions:
     """Get variant positions from normal"""
     input:
-        pileup="{output_dir}/scratch/{case}/{normal}/pileup_{chr}.bcf"
+        pileup="{output_dir}/scratch/{case}/{normal}/pileup.bcf"
     output:
-        positions=temp("{output_dir}/scratch/{case}/{normal}/{chr}.positions")
+        positions=temp("{output_dir}/scratch/{case}/{normal}/var_positions.txt")
     params:
         scripts_dir=scripts_dir,
     resources:
@@ -531,7 +531,7 @@ rule positions:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/pileup_normal.{case}.{normal}.{chr}.log",
+        "{output_dir}/logs/pileup_normal.{case}.{normal}.log",
     benchmark:
         "{output_dir}/benchmark/{case}/{normal}/positions_{chr}.txt"
     shell:
@@ -544,7 +544,7 @@ rule bafs:
         soi="{output_dir}/scratch/{case}/{somatic}/somatic.cram.crai",
         genome=genome_path,
     output:
-        loh=temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh/split/{chr}.txt")
+        loh=temp("{output_dir}/scratch/{case}/{somatic}_{normal}/bafs.txt")
     params:
         scripts_dir=scripts_dir,
     resources:
@@ -555,9 +555,9 @@ rule bafs:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/bafs.{case}.{somatic}_{normal}_{chr}.log",
+        "{output_dir}/logs/bafs.{case}.{somatic}_{normal}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{somatic}_{normal}/bafs_{chr}.txt"
+        "{output_dir}/benchmark/{case}/{somatic}_{normal}/bafs.txt"
     shell:
         "samtools mpileup {input.sombam} -l {input.positions} -f $3 -B "
         " | awk -v OFS=\"\\t\" 'BEGIN{{a=0;t=0;c=0;g=0;wt=0}}{{seq=tolower($5);a=gsub(\"a\", \"a\", seq);t=gsub(\"t\", \"t\", seq);c=gsub(\"c\",\"c\",seq);g=gsub(/g/,\"\",seq);wt=gsub(\"\\.|\\,\", \"\", seq);print $1, $2, $3, $4, a, t, c, g, wt}}' "
@@ -569,7 +569,7 @@ rule concat_bafs:
     input:
         expand("{{output_dir}}/scratch/{{case}}/{{somatic}}_{{normal}}/loh/split/{chr}.txt", chr = chromosomes)
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/bafs.txt")
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/bafs.txta")
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -589,7 +589,7 @@ rule concat_bafs:
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
-        loh=rules.concat_bafs.output,
+        loh="{output_dir}/scratch/{case}/{somatic}_{normal}/bafs.txt",
         window=rules.makewindowfile.output
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh.bed"),
