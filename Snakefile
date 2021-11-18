@@ -327,7 +327,7 @@ rule concat_normal:
         
 rule make_bins:
     input:
-        "{output_dir}/scratch/{case}/{normal}/normal/normal.bed"
+        "{output_dir}/scratch/{case}/{normal}/normal.bed"
     output:
         temp("{output_dir}/scratch/{case}/{normal}/normal/windows_unsort.txt")
     resources:
