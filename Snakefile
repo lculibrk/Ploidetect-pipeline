@@ -430,7 +430,7 @@ rule concat_bafs:
 rule getgc:
     """Get GC content for each bin"""
     input:
-        window=rules.makewindowfile.output,
+        window=rules.sort_bins.output,
         genome = genome_path,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/gc.bed"),
