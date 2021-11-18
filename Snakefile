@@ -477,7 +477,7 @@ rule getgc:
         genome = genome_path,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/gc.bed"),
-params:
+    params:
         scripts_dir=scripts_dir,
     resources:
         cpus=1,
