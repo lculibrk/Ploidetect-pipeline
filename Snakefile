@@ -411,7 +411,7 @@ rule concat_bafs:
     input:
         expand("{{output_dir}}/scratch/{{case}}/{{somatic}}_{{normal}}/bafs/{chr}.txt", chr = chromosomes)
     output:
-        expand("{output_dir}/scratch/{case}/{somatic}_{normal}/bafs/{chr}.txt")
+        "{output_dir}/scratch/{case}/{somatic}_{normal}/bafs.txt"
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
