@@ -289,7 +289,7 @@ rule concat_depths:
     input:
         expand("{{output_dir}}/scratch/{{case}}/{{lib}}/{{ident}}/{chr}.bed", chr = chromosomes)
     output:
-        temp("{output_dir}/scratch/{case}/{normal}/{ident}.bed")
+        temp("{output_dir}/scratch/{case}/{lib}/{ident}.bed")
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
