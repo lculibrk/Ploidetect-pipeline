@@ -118,6 +118,9 @@ for sample in sample_ids:
 
 print(f"Final outputs: {output_list}")
 
+wildcard_constraints:
+    lib="[^_]*"
+
 rule all:
     input:
         output_list
