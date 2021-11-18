@@ -369,7 +369,7 @@ rule genomecovsomatic:
         depth="{output_dir}/scratch/{case}/{somatic}/tumour.bed",
         window=rules.sort_bins.output
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/{somatic}.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed"),
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -387,7 +387,7 @@ rule genomecovnormal:
         depth="{output_dir}/scratch/{case}/{normal}/normal.bed",
         window=rules.sort_bins.output
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/{normal}.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed"),
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
