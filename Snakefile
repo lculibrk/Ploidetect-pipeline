@@ -252,7 +252,6 @@ rule germline_cov:
         "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
-        threshold=config["window_threshold"],
         qual = config[config["sequence_type"]]["qual"],
         maxd = config[config["sequence_type"]]["maxd"]
     log:
@@ -336,6 +335,7 @@ rule make_bins:
         mem_mb=MEM_PER_CPU,
     params:
         scripts_dir=scripts_dir,
+        threshold=config["window_threshold"],
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
