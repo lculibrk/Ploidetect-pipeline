@@ -262,7 +262,7 @@ rule germline_cov:
 rule tumour_cov:
     """Compute per-base depth in tumour bam"""
     input:
-        bam="{output_dir}/scratch/{case}/{tumour}somatic.cram",
+        bam="{output_dir}/scratch/{case}/{tumour}/somatic.cram",
         bami="{output_dir}/scratch/{case}/{tumour}/somatic.cram.crai",
     output:
         temp("{output_dir}/scratch/{case}/{tumour}/tumour/{chr}.bed"),
@@ -285,11 +285,11 @@ rule tumour_cov:
     shell:
         "samtools depth -r{wildcards.chr} -Q{params.qual} -m {params.maxd} {input.bam} > {output} 2>> {log}"
 
-rule concat_depths:
+rule concat_tumour:
     input:
-        expand("{{output_dir}}/scratch/{{case}}/{{lib}}/{{ident}}/{chr}.bed", chr = chromosomes)
+        expand("{{output_dir}}/scratch/{{case}}/{{lib}}/tumour/{chr}.bed", chr = chromosomes)
     output:
-        temp("{output_dir}/scratch/{case}/{lib}/{ident}.bed")
+        temp("{output_dir}/scratch/{case}/{lib}/tumour.bed")
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -298,9 +298,28 @@ rule concat_depths:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/concat_depths.{case}.{lib}_{ident}.log",
+        "{output_dir}/logs/concat_depths.{case}.{lib}_tumour.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{lib}/{ident}_concat_depths.txt"
+        "{output_dir}/benchmark/{case}/{lib}/concat_tumour.txt"
+    shell:
+        "cat {input} > {output}"
+
+rule concat_normal:
+    input:
+        expand("{{output_dir}}/scratch/{{case}}/{{lib}}/normal/{chr}.bed", chr = chromosomes)
+    output:
+        temp("{output_dir}/scratch/{case}/{lib}/normal.bed")
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/concat_normal.{case}.{lib}.log",
+    benchmark:
+        "{output_dir}/benchmark/{case}/{lib}/concat_normal.txt"
     shell:
         "cat {input} > {output}"
         
@@ -342,12 +361,12 @@ rule sort_bins:
     shell:
         "sort -k1,1 -k2,2n -S 300M -T tmp/ {input} > {output} 2>> {log}"
         
-rule genomecov:
+rule genomecovsomatic:
     input:
-        depth="{output_dir}/scratch/{case}/{normal}/{ident}.bed",
+        depth="{output_dir}/scratch/{case}/{somatic}/tumour.bed",
         window=rules.sort_bins.output
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/{ident}.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/{somatic}.bed"),
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
@@ -356,9 +375,28 @@ rule genomecov:
         cpus=1,
         mem_mb=MEM_PER_CPU
     benchmark:
-        "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecov{ident}.txt"
+        "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovsomatic.txt"
     shell:
         "python3 scripts/summarize_counts.py {input.depth} {input.window} > {output}"
+            
+rule genomecovnormal:
+    input:
+        depth="{output_dir}/scratch/{case}/{normal}/normal.bed",
+        window=rules.sort_bins.output
+    output:
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/{normal}.bed"),
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU
+    benchmark:
+        "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovnormal.txt"
+    shell:
+        "python3 scripts/summarize_counts.py {input.depth} {input.window} > {output}"
+    
 
 rule split_positions:
     """Split the array positions file by chromosome for parallel processing"""
