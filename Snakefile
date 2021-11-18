@@ -356,7 +356,6 @@ rule genomecovsomatic:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovsomatic{chr}.txt"
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]} "
-        " | sort -k1,1 -k2,2n "
         " | python3 scripts/summarize_counts.py - {input.window} > {output}"
 
         
@@ -383,7 +382,6 @@ rule genomecovgermline:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovgermline{chr}.txt"
     shell:
         "samtools depth -Q {params.qual} -m {params.maxd} -r {wildcards.chr} -a {input[0]}"
-        " | sort -k1,1 -k2,2n "
         " | python3 scripts/summarize_counts.py - {input.window} > {output}"
 
         
@@ -511,9 +509,9 @@ rule pileup_normal:
     log:
         "{output_dir}/logs/pileup_normal.{case}.{normal}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{normal}/pileup_normal_{chr}.txt"
+        "{output_dir}/benchmark/{case}/{normal}/pileup_normal.txt"
     shell:
-        "samtools mpileup {input.normbam} -l {params.array_positions} -f {input.genome} -v -B > {output.pileup}"
+        "bcftools mpileup {input.normbam} -l {params.array_positions} -f {input.genome} -v -B > {output.pileup}"
     
 rule positions:
     """Get variant positions from normal"""
@@ -533,13 +531,13 @@ rule positions:
     log:
         "{output_dir}/logs/pileup_normal.{case}.{normal}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{normal}/positions_{chr}.txt"
+        "{output_dir}/benchmark/{case}/{normal}/positions.txt"
     shell:
         "bcftools call -c {input} | grep '0/1' | cut -f1,2 > {output}"
 
 rule bafs:
     input:
-        positions="{output_dir}/scratch/{case}/{normal}/{chr}.positions",
+        positions="{output_dir}/scratch/{case}/{normal}/var_positions.txt",
         sombam="{output_dir}/scratch/{case}/{somatic}/somatic.cram",
         soi="{output_dir}/scratch/{case}/{somatic}/somatic.cram.crai",
         genome=genome_path,
@@ -586,10 +584,36 @@ rule concat_bafs:
     shell:
         "cat {input} > {output}"
     
+rule generate_bafs:
+    input:
+        normbam="{output_dir}/scratch/{case}/{normal}/normal.cram",
+        nori="{output_dir}/scratch/{case}/{normal}/normal.cram.crai",
+        sombam="{output_dir}/scratch/{case}/{somatic}/somatic.cram",
+        somi="{output_dir}/scratch/{case}/{somatic}/somatic.cram.crai",
+        genome=genome_path,
+    output:
+        temp("{output_dir}/scratch/{case}/{somatic}_{normal}/baf_file.txt")
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    container:
+        "docker://lculibrk/ploidetect"
+    params:
+        scripts_dir=scripts_dir,
+        array_positions=array_positions,
+    log:
+        "{output_dir}/logs/generate_bafs.{case}.{somatic}_{normal}.log",
+    benchmark:
+        "{output_dir}/benchmark/{case}/{somatic}_{normal}/generate_bafs.txt"
+    shell:
+        "python scripts/light_varcaller.py {input.normbam} {input.sombam} {params.array_positions} {input.genome} > {output}"
+    
+
+
 rule process_loh:
     """Convert allele counts to beta-allele frequencies and merge for each bin"""
     input:
-        loh="{output_dir}/scratch/{case}/{somatic}_{normal}/bafs.txt",
+        loh="{output_dir}/scratch/{case}/{somatic}_{normal}/baf.txt",
         window=rules.makewindowfile.output
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh.bed"),
@@ -646,7 +670,7 @@ rule mergedbed:
         gc=rules.getgc.output,
         tumour="{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed",
         normal="{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed",
-        loh=rules.process_loh.output,
+        loh=rules.generate_bafs.output,
     output:
         "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
     resources:

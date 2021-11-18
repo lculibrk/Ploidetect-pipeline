@@ -4,20 +4,6 @@ import math
 import re
 import collections
 
-samfile = pysam.AlignmentFile(sys.argv[1])
-positions_file = sys.argv[2]
-fasta = open(sys.argv[3], "r")
-with open(sys.argv[3] + ".fai") as f:
-	fai = f.readlines()
-fai = [line.strip().split("\t") for line in fai]
-n = 0
-for i in range(len(fai)):
-        n = n + 2 + len(fai[i][0])
-        fai[i].append(n)
-
-print(fai)
-fai = {line[0]:line[1:] for line in fai}
-
 
 
 def Bases_At_Pos(samfile, pos, chromname, minbasequal, minmapqual):
@@ -37,18 +23,18 @@ def Bases_At_Pos(samfile, pos, chromname, minbasequal, minmapqual):
     return bases
 
 def get_reference_base(fasta, fai, chromname, pos):
-	fasta.seek(0,0)
-	linebyte = int(fai[chromname][3])
-	linelen = int(fai[chromname][2])
-	start = pos 
-	end = pos+1
-	startline = math.floor((start-1)/linelen)
-	endline = math.floor(end/linelen)
-	startbyte = start + startline
-	endbyte = end + endline
-	fasta.seek(int(fai[chromname][1]) + startbyte - fai[chromname][4])
-	seq = fasta.read(endbyte-startbyte).replace("\n", "").upper()
-	return seq
+        fasta.seek(0,0)
+        linebyte = int(fai[chromname][3])
+        linelen = int(fai[chromname][2])
+        start = pos-1 
+        end = pos
+        startline = math.floor((start-1)/linelen)
+        endline = math.floor(end/linelen)
+        startbyte = start + startline
+        endbyte = end + endline
+        fasta.seek(int(fai[chromname][1]) + startbyte)
+        seq = fasta.read(endbyte-startbyte).replace("\n", "").upper()
+        return seq
 
 #fc ="10"
 #print(fai[fc])
@@ -58,20 +44,28 @@ def get_reference_base(fasta, fai, chromname, pos):
 #sys.exit()
 #pileup = samfile.pileup("NC_045512.2", 100, 101)
 
-with open(positions_file) as p:
-	entry = p.readline().strip().split("\t")
-	if len(entry) >= 2:
-		lines_to_run = True
-	else:
-		lines_to_run = False
-	while lines_to_run:
-		bases = Bases_At_Pos(samfile, int(entry[1]), entry[0], 0, 0).upper()
-		ref_base = get_reference_base(fasta, fai, entry[0], int(entry[1])).upper()
-		ref_count = bases.count(ref_base)
-		af = format(ref_count/len(bases), '.6f')
-		print(entry[0] + "\t" + str(entry[1]) + "\t" + str(int(entry[1]) + 1) + "\t" + str(af) + "\t" + str(ref_base) + "\t" + str(bases))
-		sys.stdout.flush()
-		entry = p.readline().strip().split("\t")
-		if len(entry) < 2:
-			lines_to_run = False
-		
+
+if __name__ == "__main__":
+        samfile = pysam.AlignmentFile(sys.argv[1])
+        positions_file = sys.argv[2]
+        fasta = open(sys.argv[3], "r")
+        with open(sys.argv[3] + ".fai") as f:
+                fai = f.readlines()
+        fai = [line.strip().split("\t") for line in fai]
+        fai = {line[0]:line[1:] for line in fai}
+        with open(positions_file) as p:
+                entry = p.readline().strip().split("\t")
+                if len(entry) >= 2:
+                        lines_to_run = True
+                else:
+                        lines_to_run = False
+                while lines_to_run:
+                        bases = Bases_At_Pos(samfile, int(entry[1]), entry[0], 0, 0).upper()
+                        ref_base = get_reference_base(fasta, fai, entry[0], int(entry[1])).upper()
+                        ref_count = bases.count(ref_base)
+                        af = format(ref_count/len(bases), '.6f')
+                        print(entry[0] + "\t" + str(entry[1]) + "\t" + str(int(entry[1]) + 1) + "\t" + str(af) + "\t" + str(ref_base) + "\t" + str(bases))
+                        sys.stdout.flush()
+                        entry = p.readline().strip().split("\t")
+                        if len(entry) < 2:
+                                lines_to_run = False
