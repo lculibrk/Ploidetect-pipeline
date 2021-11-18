@@ -14,7 +14,7 @@ count = 0
 nbins = 0
 start = stop = lastknownend = 0
 # Read infile
-infile = fileinput.input(files="-")
+infile = fileinput.input(files=sys.argv[1])
 # Read bins file
 with open(sys.argv[2]) as f:
     bins = f.readlines()

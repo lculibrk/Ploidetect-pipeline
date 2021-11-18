@@ -15,13 +15,13 @@ If the ratio of tumor to normal is not 2:1, adjust the threshold accordingly. So
 import fileinput
 import sys
 
-[CHROM, START, STOP, COUNT] = range(4)
+[CHROM, START, COUNT] = range(3)
 
 # Initialize count and start variables
 count = 0
 start = stop = lastknownend = 0
 # Read infile
-infile = fileinput.input(files="-")
+infile = fileinput.input(files=sys.argv[1])
 # Get threshold
 threshold = int(sys.argv[2])
 # Initialize chromosome as None
@@ -54,11 +54,11 @@ for line in infile:
         # Add to count
         count += int(line[COUNT])
         # Record end position of the count (in case new chromosome is skipped to)
-        lastknownend = int(line[STOP])
+        lastknownend = int(line[START]) + 1
     # If count exceeds threshold
     if count >= threshold:
         # Record end position
-        stop = int(line[STOP])
+        stop = int(line[START]) + 1
         # Record chromosome
         chrom = line[CHROM]
         # Output chromosome, start of bin, end of bin, count
