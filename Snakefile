@@ -298,9 +298,9 @@ rule concat_depths:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/concat_depths.{case}.{ident}.log",
+        "{output_dir}/logs/concat_depths.{case}.{lib}_{ident}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{ident}/concat_depths.txt"
+        "{output_dir}/benchmark/{case}/{lib}/{ident}_concat_depths.txt"
     shell:
         "cat {input} > {output}"
         
