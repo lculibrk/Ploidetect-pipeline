@@ -458,7 +458,7 @@ rule mergedbed:
         gc=rules.getgc.output,
         tumour="{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed",
         normal="{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed",
-        loh=rules.generate_bafs.output,
+        loh=rules.concat_bafs.output,
     output:
         "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
     resources:
