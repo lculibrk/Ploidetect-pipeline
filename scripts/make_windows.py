@@ -67,7 +67,7 @@ for line in infile:
         out = [str(x) for x in out]
         out = "\t".join(out)
         # Set new start
-        start = int(line[STOP])
+        start = int(line[START]) + 1
         # STOP THE COUNT!
         count = 0
         # Print to stdout
