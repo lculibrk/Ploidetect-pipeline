@@ -55,7 +55,7 @@ if __name__ == "__main__":
         else:
             start_pos = 1
 
-        for pileupcolumn in samfile.pileup(chrom, start_pos, min_mapping_quality = parser.qual, compute_baq = False, stepper = "nofilter", max_depth = parser.maxd):
+        for pileupcolumn in samfile.pileup(chrom, start_pos, min_mapping_quality = args.qual, compute_baq = False, stepper = "nofilter", max_depth = args.maxd):
             print(chrom + "\t" + str(pileupcolumn.pos) + "\t" + str(pileupcolumn.n))
             sys.stdout.flush()
         ## If we're done, write the final output
