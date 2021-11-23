@@ -40,23 +40,28 @@ if __name__ == "__main__":
         samfile = pysam.AlignmentFile(args.cram)
         chrom = args.region
         ## If output file exists, open it
-        if os.path.isfile(args.output):
-            with open(args.output) as f:
-                out = f.readlines()
+        with open(args.output) as f:
+            out = f.readlines()
+        if len(out) > 0:
             final_line = out[-1]
             ## If last written line was truncated somehow, strip it out
             if not "\n" in final_line:
                 out.pop()
-                with open(args.output) as f:
+                with open(args.output, "w") as f:
                     f.writelines(out[:-1])
                 final_line = out[-2]
             final_line = final_line.strip().split("\t")
-            start_pos = final_line[1] + 1
+            start_pos = int(final_line[1]) + 1
         else:
             start_pos = 1
-
-        for pileupcolumn in samfile.pileup(chrom, start_pos, min_mapping_quality = int(args.qual), compute_baq = False, stepper = "nofilter", max_depth = int(args.maxd)):
-            print(chrom + "\t" + str(pileupcolumn.pos) + "\t" + str(pileupcolumn.n))
+        caught_up = False
+        for pileupcolumn in samfile.pileup(chrom, max(0, start_pos-150), min_base_quality = 0,  min_mapping_quality = int(args.qual), max_depth = int(args.maxd), compute_baq = False, ignore_orphans = False):
+            if not caught_up:
+                if pileupcolumn.reference_pos < start_pos:
+                    continue
+                else:
+                    caught_up = True
+            print(chrom + "\t" + str(pileupcolumn.reference_pos) + "\t" + str(pileupcolumn.n))
             sys.stdout.flush()
         ## If we're done, write the final output
         with open(args.final) as f:
