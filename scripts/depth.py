@@ -6,6 +6,7 @@ import math
 import re
 import collections
 import argparse
+import os
 
 def Bases_At_Pos(samfile, pos, chromname, minmapqual):
     'Return a string of the bases at that position.'
