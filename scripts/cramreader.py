@@ -36,14 +36,6 @@ def get_reference_base(fasta, fai, chromname, pos):
         seq = fasta.read(endbyte-startbyte).replace("\n", "").upper()
         return seq
 
-#fc ="10"
-#print(fai[fc])
-#fasta.seek(0,0)
-#fasta.seek(int(fai[fc][1])-24)
-#print(fasta.read(51))
-#sys.exit()
-#pileup = samfile.pileup("NC_045512.2", 100, 101)
-
 
 if __name__ == "__main__":
         samfile = pysam.AlignmentFile(sys.argv[1])
