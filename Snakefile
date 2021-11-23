@@ -253,13 +253,14 @@ rule germline_cov:
     params:
         scripts_dir=scripts_dir,
         qual = config[config["sequence_type"]]["qual"],
-        maxd = config[config["sequence_type"]]["maxd"]
+        maxd = config[config["sequence_type"]]["maxd"],
+        actual_output = os.path.join(wildcards.output_dir, "scratch", wildcards.case, wildcards.normal, "normal", wildcards.chr + ".bed")
     log:
         "{output_dir}/logs/germline_cov.{case}.{normal}.{chr}.log",
     benchmark:
         "{output_dir}/benchmark/{case}/{normal}/germline_cov{chr}.txt"
     shell:
-        "samtools depth -r{wildcards.chr} -Q{params.qual} -m {params.maxd} {input.bam} > {output} 2>> {log}"
+        "python3 scripts/depth.py -c {input.bam} -o {params.actual_output} -r {wildcards.chr} -q {params.qual} -m {params.maxd} -f {output} >> {params.actual_output} 2>> {log}"
 
 rule tumour_cov:
     """Compute per-base depth in tumour bam"""
@@ -277,15 +278,15 @@ rule tumour_cov:
         "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
-        threshold=config["window_threshold"],
         qual = config[config["sequence_type"]]["qual"],
-        maxd = config[config["sequence_type"]]["maxd"]
+        maxd = config[config["sequence_type"]]["maxd"],
+        actual_output = os.path.join(wildcards.output_dir, "scratch", wildcards.case, wildcards.tumour, "tumour", wildcards.chr + ".bed")
     log:
         "{output_dir}/logs/germline_cov.{case}.{tumour}.{chr}.log",
     benchmark:
         "{output_dir}/benchmark/{case}/{tumour}/germline_cov{chr}.txt"
     shell:
-        "samtools depth -r{wildcards.chr} -Q{params.qual} -m {params.maxd} {input.bam} > {output} 2>> {log}"
+        "python3 scripts/depth.py -c {input.bam} -o {params.actual_output} -r {wildcards.chr} -q {params.qual} -m {params.maxd} -f {output} >> {params.actual_output} 2>> {log}"
 
 rule concat_tumour:
     input:
