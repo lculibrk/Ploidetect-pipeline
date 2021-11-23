@@ -40,9 +40,9 @@ if __name__ == "__main__":
         samfile = pysam.AlignmentFile(args.cram)
         chrom = args.region
         ## If output file exists, open it
-        if os.path.isfile(args.output):
-            with open(args.output) as f:
+        with open(args.output) as f:
                 out = f.readlines()
+        if len(out) > 0:
             final_line = out[-1]
             ## If last written line was truncated somehow, strip it out
             if not "\n" in final_line:
