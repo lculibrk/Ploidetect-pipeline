@@ -24,10 +24,10 @@ def Bases_At_Pos(samfile, pos, chromname, minmapqual):
 
 
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(
-    	description="Compute per-read depth",
-    	formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-)
+        parser = argparse.ArgumentParser(
+            description="Compute per-read depth",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
         parser.add_argument("-c", "--cram", required = True, help = "Path to cram")
         parser.add_argument("-o", "--output", required = True, help = "output file")
         parser.add_argument("-r", "--region", required = True, help = "region/chromosome to compute")
