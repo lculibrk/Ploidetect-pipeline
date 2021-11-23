@@ -254,7 +254,7 @@ rule germline_cov:
         scripts_dir=scripts_dir,
         qual = config[config["sequence_type"]]["qual"],
         maxd = config[config["sequence_type"]]["maxd"],
-        actual_output = os.path.join(wildcards.output_dir, "scratch", wildcards.case, wildcards.normal, "normal", wildcards.chr + ".tmp")
+        actual_output = lambda w: os.path.join(w.output_dir, "scratch", w.case, w.normal, "normal", w.chr + ".tmp")
     log:
         "{output_dir}/logs/germline_cov.{case}.{normal}.{chr}.log",
     benchmark:
@@ -280,7 +280,7 @@ rule tumour_cov:
         scripts_dir=scripts_dir,
         qual = config[config["sequence_type"]]["qual"],
         maxd = config[config["sequence_type"]]["maxd"],
-        actual_output = os.path.join(wildcards.output_dir, "scratch", wildcards.case, wildcards.tumour, "tumour", wildcards.chr + ".tmp")
+        actual_output = lambda w: os.path.join(w.output_dir, "scratch", w.case, w.tumour, "tumour", w.chr + ".tmp")
     log:
         "{output_dir}/logs/germline_cov.{case}.{tumour}.{chr}.log",
     benchmark:
