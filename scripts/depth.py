@@ -7,6 +7,7 @@ import re
 import collections
 import argparse
 import os
+import shutil
 
 def Bases_At_Pos(samfile, pos, chromname, minmapqual):
     'Return a string of the bases at that position.'
@@ -40,18 +41,29 @@ if __name__ == "__main__":
         samfile = pysam.AlignmentFile(args.cram)
         chrom = args.region
         ## If output file exists, open it
-        with open(args.output) as f:
-            out = f.readlines()
-        if len(out) > 0:
-            final_line = out[-1]
-            ## If last written line was truncated somehow, strip it out
-            if not "\n" in final_line:
-                out.pop()
-                with open(args.output, "w") as f:
-                    f.writelines(out[:-1])
-                final_line = out[-2]
-            final_line = final_line.strip().split("\t")
-            start_pos = int(final_line[1]) + 1
+        fsize = os.stat(args.output).st_size
+        if fsize > 0:
+            with open(args.output, "rb+") as f:
+                ## strip final line in case it's truncated
+                f.seek(0, os.SEEK_END)
+                pos = f.tell() - 1
+                while pos > 0 and f.read(1).decode() != "\n":
+                    pos -= 1
+                    f.seek(pos, os.SEEK_SET)
+                if pos > 0:
+                    f.seek(pos, os.SEEK_SET)
+                    f.truncate()
+            with open(args.output, "rb") as f:
+                f.seek(0, os.SEEK_END)
+                pos = f.tell() - 1
+                b_read = 1
+                while pos > 0 and f.read(1).decode() != "\n":
+                    pos -= 1
+                    f.seek(pos, os.SEEK_SET)
+                    b_read += 1
+                pos += 1
+                final_line = f.read(b_read).decode()
+            start_pos = int(final_line.split()[1]) + 1
         else:
             start_pos = 1
         caught_up = False
@@ -64,5 +76,4 @@ if __name__ == "__main__":
             print(chrom + "\t" + str(pileupcolumn.reference_pos) + "\t" + str(pileupcolumn.n))
             sys.stdout.flush()
         ## If we're done, write the final output
-        with open(args.final) as f:
-            f.writelines(["done\n"])
+        shutil.copyfile(args.output, args.final)
