@@ -239,8 +239,8 @@ rule copy_cram:
 rule germline_cov:
     """Compute per-base depth in germline bam"""
     input:
-        bam="{output_dir}/scratch/{case}/{normal}/normal.cram",
-        bami="{output_dir}/scratch/{case}/{normal}/normal.cram.crai",
+        bam=ancient("{output_dir}/scratch/{case}/{normal}/normal.cram"),
+        bami=ancient("{output_dir}/scratch/{case}/{normal}/normal.cram.crai"),
     output:
         temp("{output_dir}/scratch/{case}/{normal}/normal/{chr}.bed"),
     resources:
@@ -265,8 +265,8 @@ rule germline_cov:
 rule tumour_cov:
     """Compute per-base depth in tumour bam"""
     input:
-        bam="{output_dir}/scratch/{case}/{tumour}/somatic.cram",
-        bami="{output_dir}/scratch/{case}/{tumour}/somatic.cram.crai",
+        bam=ancient("{output_dir}/scratch/{case}/{tumour}/somatic.cram"),
+        bami=ancient("{output_dir}/scratch/{case}/{tumour}/somatic.cram.crai"),
     output:
         temp("{output_dir}/scratch/{case}/{tumour}/tumour/{chr}.bed"),
     resources:
