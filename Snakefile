@@ -417,7 +417,7 @@ rule sort_positions:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/split_array_{chr}.log",
+        "{output_dir}/logs/sort_positions.log",
     benchmark:
         "{output_dir}/benchmark/sort_positions.txt"
     shell: 
