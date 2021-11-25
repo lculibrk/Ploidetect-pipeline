@@ -369,7 +369,7 @@ rule sort_bins:
         
 rule genomecovsomatic:
     input:
-        depth="{output_dir}/scratch/{case}/{somatic}/tumour.bed",
+        depth=ancient("{output_dir}/scratch/{case}/{somatic}/tumour.bed"),
         window=rules.sort_bins.output
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed"),
@@ -387,7 +387,7 @@ rule genomecovsomatic:
             
 rule genomecovnormal:
     input:
-        depth="{output_dir}/scratch/{case}/{normal}/normal.bed",
+        depth=ancient("{output_dir}/scratch/{case}/{normal}/normal.bed"),
         window=rules.sort_bins.output
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed"),
