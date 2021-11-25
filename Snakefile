@@ -290,7 +290,7 @@ rule tumour_cov:
 
 rule concat_tumour:
     input:
-        expand("{{output_dir}}/scratch/{{case}}/{{lib}}/tumour/{chr}.bed", chr = chromosomes)
+        expand(ancient("{{output_dir}}/scratch/{{case}}/{{lib}}/tumour/{chr}.bed"), chr = chromosomes)
     output:
         temp("{output_dir}/scratch/{case}/{lib}/tumour.bed")
     resources:
