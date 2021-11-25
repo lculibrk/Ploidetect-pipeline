@@ -403,11 +403,30 @@ rule genomecovnormal:
     shell:
         "python3 scripts/summarize_counts.py {input.depth} {input.window} > {output}"
     
+rule sort_positions:
+    """Sort the array positions file"""
+    input:
+        array_positions
+    output:
+        temp("{output_dir}/scratch/sorted_array.txt")
+    resources:
+        cpus=1,
+        mem_mb=MEM_PER_CPU,
+    conda:
+        "conda_configs/sequence_processing.yaml"
+    container:
+        "docker://lculibrk/ploidetect"
+    log:
+        "{output_dir}/logs/split_array_{chr}.log",
+    benchmark:
+        "{output_dir}/benchmark/sort_positions.txt"
+    shell: 
+        "sort -k1,1 -k2,2n -S 200M {input} > {output}"
 
 rule split_positions:
     """Split the array positions file by chromosome for parallel processing"""
     input:
-        array_positions
+        "{output_dir}/scratch/sorted_array.txt"
     output:
         temp("{output_dir}/scratch/split_array/{chr}.txt")
     resources:

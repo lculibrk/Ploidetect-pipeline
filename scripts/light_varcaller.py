@@ -3,8 +3,9 @@ import sys
 import math
 import re
 import collections
-
-
+import argparse
+import os
+import shutil
 
 def Bases_At_Pos(samfile, pos, chromname, minbasequal, minmapqual):
     'Return a string of the bases at that position.'
@@ -38,15 +39,56 @@ def get_reference_base(fasta, fai, chromname, pos):
 
 
 if __name__ == "__main__":
-        normfile = pysam.AlignmentFile(sys.argv[1])
-        somafile = pysam.AlignmentFile(sys.argv[2])
-        positions_file = sys.argv[3]
-        fasta = open(sys.argv[4], "r")
-        with open(sys.argv[4] + ".fai") as f:
+        parser = argparse.ArgumentParser(
+            description="Compute per-read depth",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
+        parser.add_argument("-n", "--ncram", required = True, help = "Path to normal cram")
+        parser.add_argument("-t", "--tcram", required = True, help = "Path to tumour cram")
+        parser.add_argument("-o", "--output", required = True, help = "output file")
+        parser.add_argument("-r", "--regions", required = True, help = "positions file")
+        parser.add_argument("-a", "--fasta", required = True, help = "Fasta file")
+        parser.add_argument("-f", "--final", required = True, help = "Final output file")
+        args = parser.parse_args()
+        normfile = pysam.AlignmentFile(args.ncram)
+        somafile = pysam.AlignmentFile(args.tcram)
+        positions_file = args.regions
+        fasta = open(args.fasta, "r")
+        with open(args.fasta + ".fai") as f:
                 fai = f.readlines()
         fai = [line.strip().split("\t") for line in fai]
         fai = {line[0]:line[1:] for line in fai}
+        ## Find last written position
+        fsize = os.stat(args.output).st_size
+        if fsize > 0:
+            with open(args.output, "rb+") as f:
+                ## strip final line in case it's truncated
+                f.seek(0, os.SEEK_END)
+                pos = f.tell() - 1
+                while pos > 0 and f.read(1).decode() != "\n":
+                    pos -= 1
+                    f.seek(pos, os.SEEK_SET)
+                if pos > 0:
+                    f.seek(pos + 1, os.SEEK_SET)
+                    f.truncate()
+            with open(args.output, "rb") as f:
+                f.seek(0, os.SEEK_END)
+                pos = f.tell() - 1
+                b_read = 1
+                while pos > 0 and f.read(1).decode() != "\n":
+                    pos -= 1
+                    f.seek(pos, os.SEEK_SET)
+                    b_read += 1
+                pos += 1
+                final_line = f.read(b_read).decode()
+            final_line = final_line.strip().split("\t")
+            offset = int(final_line[4])
+        else:
+            final_line = ""
+            offset = 0
         with open(positions_file) as p:
+                p.seek(offset)
+                byte_count = p.tell()
                 entry = p.readline().strip().split("\t")
                 if len(entry) >= 2:
                         lines_to_run = True
@@ -62,8 +104,10 @@ if __name__ == "__main__":
                                 if len(bases) > 10:
                                         ref_count = bases.count(ref_base)
                                         af = ref_count/len(bases)
-                                        print(entry[0] + "\t" + str(entry[1]) + "\t" + str(int(entry[1]) + 1) + "\t" + format(af, '.6f'))
+                                        print(entry[0] + "\t" + str(entry[1]) + "\t" + str(int(entry[1]) + 1) + "\t" + format(af, '.6f') + "\t" + str(byte_count))
                                         sys.stdout.flush()
                         entry = p.readline().strip().split("\t")
+                        byte_count = p.tell()
                         if len(entry) < 2:
                                 lines_to_run = False
+                shutil.copyfile(args.output, args.final)
