@@ -463,12 +463,13 @@ rule generate_bafs:
     params:
         scripts_dir=scripts_dir,
         array_positions=array_positions,
+        actual_output = lambda w: os.path.join(w.output_dir, "scratch", w.case, w.somatic + "_" + w.normal, "bafs", w.chr + ".tmp")
     log:
         "{output_dir}/logs/generate_bafs.{case}.{somatic}_{normal}_{chr}.log",
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/generate_bafs_{chr}.txt"
     shell:
-        "python {params.scripts_dir}/light_varcaller.py {input.normbam} {input.sombam} {input.array} {input.genome} > {output}"
+        "python {params.scripts_dir}/light_varcaller.py -n {input.normbam} -t {input.sombam} -o {params.actual_output} -r {input.array} -a {input.genome} -f {output} >> {params.actual_output}"
     
 rule concat_bafs:
     input:
