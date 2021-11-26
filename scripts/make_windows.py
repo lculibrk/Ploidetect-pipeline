@@ -12,7 +12,6 @@ The 100000 is the threshold for normal depth to create variable-width bins.
 Ploidetect was developed for 40x normal, 80x tumor genomes.
 If the ratio of tumor to normal is not 2:1, adjust the threshold accordingly. So for 40x/40x you might decide to use a larger threshold of 200000 to account for the tumor genome having more noise.
 """
-import fileinput
 import sys
 
 [CHROM, START, COUNT] = range(3)
@@ -21,13 +20,14 @@ import sys
 count = 0
 start = stop = lastknownend = 0
 # Read infile
-infile = fileinput.input(files=sys.argv[1])
+infile = sys.argv[1]
 # Get threshold
 threshold = int(sys.argv[2])
 # Initialize chromosome as None
 chrom = None
 # Loop over input lines
-for line in infile:
+with open(infile) as f:
+    line = f.readline()
     # File handling and santisation
     line = line.rstrip("\n")
     line = line.split("\t")

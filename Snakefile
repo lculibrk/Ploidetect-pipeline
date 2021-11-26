@@ -324,13 +324,13 @@ rule concat_normal:
     benchmark:
         "{output_dir}/benchmark/{case}/{lib}/concat_normal.txt"
     shell:
-        "cat {input} > {output}"
+        "sort -k1,1 -k2,2n -S 300M -T tmp/ {input} > {output}"
         
 rule make_bins:
     input:
-        "{output_dir}/scratch/{case}/{normal}/normal.bed"
+        "{output_dir}/scratch/{case}/{normal}/normal/{chr}.bed"
     output:
-        temp("{output_dir}/scratch/{case}/{normal}/normal/windows_unsort.txt")
+        temp("{output_dir}/scratch/{case}/{normal}/{chr}_unsort.txt")
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -350,7 +350,7 @@ rule make_bins:
 
 rule sort_bins:
     input:
-        "{output_dir}/scratch/{case}/{normal}/normal/windows_unsort.txt"
+        expand("{output_dir}/scratch/{case}/{normal}/{chr}_unsort.txt", chr = chromosomes))
     output:
         temp("{output_dir}/scratch/{case}/{normal}/normal/windows.txt")
     resources:
