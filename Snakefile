@@ -342,9 +342,9 @@ rule make_bins:
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/make_bins.{case}.{normal}.log",
+        "{output_dir}/logs/make_bins.{case}.{normal}.{chr}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{normal}/make_bins.txt"
+        "{output_dir}/benchmark/{case}/{normal}/make_bins_{chr}.txt"
     shell:
         "python3 {params.scripts_dir}/make_windows.py {input} {params.threshold} > {output} 2>> {log}"
 
