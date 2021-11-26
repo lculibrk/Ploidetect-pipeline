@@ -350,7 +350,7 @@ rule make_bins:
 
 rule sort_bins:
     input:
-        expand("{output_dir}/scratch/{case}/{normal}/{chr}_unsort.txt", chr = chromosomes))
+        expand("{output_dir}/scratch/{case}/{normal}/{chr}_unsort.txt", chr = chromosomes)
     output:
         temp("{output_dir}/scratch/{case}/{normal}/normal/windows.txt")
     resources:
