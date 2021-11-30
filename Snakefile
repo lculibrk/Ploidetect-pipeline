@@ -34,25 +34,25 @@ else:
 if len(chromosomes) == 0:
     raise(WorkflowSetupError("No valid chromosomes found. If you're using a non-standard genome (not hg38 or hg19), you must explicitly specify chromosome names in the config"))
 
-if "genome" in config:
-    if config["genome_name"] in config["genome"]:
-        genome_path = config["genome"][config["genome_name"]]
-    else:
-        genome_path = "failed"
-    if not os.path.exists(genome_path):
-        genome_path = "failed"
-else:
-    genome_path == "failed"
+#if "genome" in config:
+#    if config["genome_name"] in config["genome"]:
+#        genome_path = config["genome"][config["genome_name"]]
+#    else:
+#        genome_path = "failed"
+#    if not os.path.exists(genome_path):
+#        genome_path = "failed"
+#else:
+#    genome_path == "failed"
 
-if genome_path == "failed":
-    hgver = config["genome_name"]
-    connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
-    if connec.status_code == 200:
-        genome_path = f"resources/{hgver}/genome.fa"
-    else:
-        raise(WorkflowSetupError("Genome fasta file not found in config or on UCSC. Specify a path to your genome fasta"))
+#if genome_path == "failed":
+    #hgver = config["genome_name"]
+    #connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
+    #if connec.status_code == 200:
+    #    genome_path = f"resources/{hgver}/genome.fa"
+    #else:
+    #    raise(WorkflowSetupError("Genome fasta file not found in config or on UCSC. Specify a path to your genome fasta"))
 
-
+genome_path = "resources/hg19/genome.fa"
 
 output_dir = config["output_dir"]
 
@@ -82,15 +82,15 @@ with open(array_positions) as f:
 
 
 cyto_path = config["cyto_path"] if "cyto_path" in config else ""
-if cyto_path == "auto":
-    ## Try to automatically get cytobands based on genome name
-    hgver = config["genome_name"]
-    connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
-    if connec.status_code == 200:
-        cyto_path = f"resources/{hgver}/cytobands.txt"
-        cyto_arg = f"-c {cyto_path}"
-    else:
-        raise WorkflowSetupError("Cytoband file is set to auto-detect, but could not download cytoband file. Make sure you didn't misspell the genome file, leave the cyto_path blank in the config, or explicitly set a path for it")
+#if cyto_path == "auto":
+#    ## Try to automatically get cytobands based on genome name
+#    hgver = config["genome_name"]
+#    connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
+#    if connec.status_code == 200:
+#        cyto_path = f"resources/{hgver}/cytobands.txt"
+#        cyto_arg = f"-c {cyto_path}"
+#    else:
+#        raise WorkflowSetupError("Cytoband file is set to auto-detect, but could not download cytoband file. Make sure you didn't misspell the genome file, leave the cyto_path blank in the config, or explicitly set a path for it")
 
 
 ## Parse sample information
@@ -121,6 +121,8 @@ print(f"Final outputs: {output_list}")
 wildcard_constraints:
     lib="[^_]*"
 
+localrules: download_genome, all
+
 rule all:
     input:
         output_list
@@ -144,7 +146,7 @@ rule ploidetect_install:
             install_dir=workflow.basedir,
         ),
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/r.yaml"
@@ -160,26 +162,26 @@ rule ploidetect_install:
         " && echo {params} > {output} && date >> {output}"
 
 
-rule download_cytobands:
-    """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
-    input:
-        HTTP.remote(
-            expand(
-                "http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz",
-                hgver=config["genome_name"],
-            )
-        ),
-    output:
-        expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
-    resources:
-        cpus=1,
-        mem_mb=MEM_PER_CPU,
-    conda:
-        "conda_configs/sequence_processing.yaml"
-    benchmark:
-        "benchmark/cytobands.txt"
-    shell:
-        "gunzip -c {input} | sed 's/chr//g' > {output}"
+#rule download_cytobands:
+#    """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
+#    input:
+#        HTTP.remote(
+#            expand(
+#                "http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz",
+#                hgver=config["genome_name"],
+#            )
+#        ),
+#    output:
+#        expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
+#    resources:
+#        cpus=2,
+#        mem_mb=MEM_PER_CPU,
+#    conda:
+#        "conda_configs/sequence_processing.yaml"
+#    benchmark:
+#        "benchmark/cytobands.txt"
+#    shell:
+#        "gunzip -c {input} | sed 's/chr//g' > {output}"
 
 rule download_genome:
     input:
@@ -193,7 +195,7 @@ rule download_genome:
         expand("resources/{hgver}/genome.fa", hgver = config["genome_name"]),
         expand("resources/{hgver}/genome.fa.fai", hgver = config["genome_name"]),
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -211,7 +213,7 @@ rule copy_ncram:
         cram=temp("{output_dir}/scratch/{case}/{lib}/normal.cram"),
         crai=temp("{output_dir}/scratch/{case}/{lib}/normal.cram.crai")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     benchmark:
         "{output_dir}/benchmark/{case}/{lib}/copy_normal.txt"
@@ -228,7 +230,7 @@ rule copy_cram:
         cram=temp("{output_dir}/scratch/{case}/{lib}/somatic.cram"),
         crai=temp("{output_dir}/scratch/{case}/{lib}/somatic.cram.crai")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     benchmark:
         "{output_dir}/benchmark/{case}/{lib}/copy_tumour.txt"
@@ -244,7 +246,7 @@ rule germline_cov:
     output:
         temp("{output_dir}/scratch/{case}/{normal}/normal/{chr}.bed"),
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -270,7 +272,7 @@ rule tumour_cov:
     output:
         temp("{output_dir}/scratch/{case}/{tumour}/tumour/{chr}.bed"),
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -294,7 +296,7 @@ rule concat_tumour:
     output:
         temp("{output_dir}/scratch/{case}/{lib}/tumour.bed")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -313,7 +315,7 @@ rule concat_normal:
     output:
         temp("{output_dir}/scratch/{case}/{lib}/normal.bed")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -332,7 +334,7 @@ rule make_bins:
     output:
         temp("{output_dir}/scratch/{case}/{normal}/{chr}_unsort.txt")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     params:
         scripts_dir=scripts_dir,
@@ -354,7 +356,7 @@ rule sort_bins:
     output:
         temp("{output_dir}/scratch/{case}/{normal}/normal/windows.txt")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -378,7 +380,7 @@ rule genomecovsomatic:
     container:
         "docker://lculibrk/ploidetect"
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovsomatic.txt"
@@ -396,7 +398,7 @@ rule genomecovnormal:
     container:
         "docker://lculibrk/ploidetect"
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovnormal.txt"
@@ -410,7 +412,7 @@ rule sort_positions:
     output:
         temp("{output_dir}/scratch/sorted_array.txt")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -430,7 +432,7 @@ rule split_positions:
     output:
         temp("{output_dir}/scratch/split_array/{chr}.txt")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -456,10 +458,12 @@ rule generate_bafs:
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/bafs/{chr}.txt")
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     container:
         "docker://lculibrk/ploidetect"
+    conda:
+        "conda_configs/sequence_processing.yaml"
     params:
         scripts_dir=scripts_dir,
         array_positions=array_positions,
@@ -477,7 +481,7 @@ rule concat_bafs:
     output:
         "{output_dir}/scratch/{case}/{somatic}_{normal}/bafs.txt"
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     container:
         "docker://lculibrk/ploidetect"
@@ -501,7 +505,7 @@ rule getgc:
     params:
         scripts_dir=scripts_dir,
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -527,7 +531,7 @@ rule mergedbed:
     output:
         "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
     resources:
-        cpus=1,
+        cpus=2,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
@@ -542,96 +546,3 @@ rule mergedbed:
         "| sed 's/chr//g' > {output}" ## Cuts out any "chr" if using hg38
         " 2> {log}"
         " && ls -l {output} >> {log}"
-
-
-rule preseg:
-    """Presegment and prepare data for input into Ploidetect"""
-    input:
-        "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
-        rules.ploidetect_install.output if workflow.use_conda and not workflow.use_singularity else __file__,
-        cytos=cyto_path,
-    output:
-        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
-    resources:
-        cpus=24,
-        mem_mb=24 * MEM_PER_CPU,
-    conda:
-        "conda_configs/r.yaml"
-    container:
-        "docker://lculibrk/ploidetect"
-    params:
-        scripts_dir=scripts_dir,
-    log:
-        "{output_dir}/logs/preseg.{case}.{somatic}_{normal}.log",
-    benchmark:
-        "{output_dir}/benchmark/{case}/{somatic}_{normal}/preseg.txt"
-    shell:
-        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -c {input.cytos} -o {output}"
-
-        
-rule ploidetect:
-    """Runs Ploidetect"""
-    input:
-        preseg=rules.preseg.output,
-        install=(
-            rules.ploidetect_install.output
-            if not workflow.use_singularity
-            and "install_ploidetect" in config.keys()
-            and config["install_ploidetect"]
-            else __file__
-        )
-    output:
-        plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
-        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
-        meta="{output_dir}/{case}/{somatic}_{normal}/meta.RDS",
-    conda:
-        "conda_configs/r.yaml"
-    resources:
-        cpus=24,
-        mem_mb=24 * MEM_PER_CPU,
-    container:
-        "docker://lculibrk/ploidetect"
-    params:
-        scripts_dir=scripts_dir,
-        cyto_arg = cyto_arg,
-    log:
-        "{output_dir}/logs/ploidetect.{case}.{somatic}_{normal}.log",
-    benchmark:
-        "{output_dir}/benchmark/{case}/{somatic}_{normal}/ploidetect.txt"
-    shell:
-        "Rscript {params.scripts_dir}/run_ploidetect2.R "
-        " -i {input.preseg} "
-        " -o {output.models} -p {output.plots} -r {output.meta} {params.cyto_arg}"
-        " &> {log}"
-
-
-rule ploidetect_copynumber:
-    """Performs CNV calling using the tumor purity and ploidy estimated by Ploidetect"""
-    input:
-        cytos=cyto_path,
-        models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
-        rds="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
-        plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
-    output:
-        cna="{output_dir}/{case}/{somatic}_{normal}/cna.txt",
-        cna_plots="{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
-        cna_cond="{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
-    conda:
-        "conda_configs/r.yaml"
-    container:
-        "docker://lculibrk/ploidetect"
-    resources:
-        cpus=24,
-        mem_mb=24 * MEM_PER_CPU,
-    params:
-        scripts_dir=scripts_dir,
-        cyto_arg = cyto_arg,
-    log:
-        "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
-    benchmark:
-        "{output_dir}/benchmark/{case}/{somatic}_{normal}/cnv.txt"
-    shell:
-        "Rscript {params.scripts_dir}/ploidetect_copynumber.R"
-        " -i {input.rds} -m {input.models}"
-        " -p {output.cna_plots} -o {output.cna} {params.cyto_arg}"
-        " &> {log}"
