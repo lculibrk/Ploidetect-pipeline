@@ -20,6 +20,8 @@ with open(sys.argv[1] + ".fai") as f:
 	fai = f.readlines()
 
 fai = [line.strip().split("\t") for line in fai]
+for line in range(len(fai)):
+    fai[line][0] = re.sub("chr", "", fai[line][0])
 fai = {line[0]:line[1:] for line in fai}
 
 

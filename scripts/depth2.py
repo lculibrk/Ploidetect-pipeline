@@ -75,11 +75,11 @@ if __name__ == "__main__":
                     continue
                 else:
                     caught_up = True
-#            while prev_pos < pileupcolumn.reference_pos - 1:
-#                print(chrom + "\t" + str(prev_pos+1) + "\t0")
-#                prev_pos += 1
-            print(chrom + "\t" + str(pileupcolumn.reference_pos) + "\t" + str(pileupcolumn.n))
+            while prev_pos < pileupcolumn.reference_pos - 1:
+                sys.stdout.write(chrom + "\t" + str(prev_pos+1) + "\t" + "0".zfill(5) + "\n")
+                prev_pos += 1
+            ol = chrom + "\t" + str(pileupcolumn.reference_pos) + "\t" + str(pileupcolumn.n).zfill(5) + "\n"
+            sys.stdout.write(ol)
             prev_pos += 1
-            sys.stdout.flush()
         ## If we're done, write the final output
         shutil.copyfile(args.output, args.final)

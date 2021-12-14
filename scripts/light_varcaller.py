@@ -57,6 +57,10 @@ if __name__ == "__main__":
         with open(args.fasta + ".fai") as f:
                 fai = f.readlines()
         fai = [line.strip().split("\t") for line in fai]
+        for i in range(len(fai)):
+            line = fai[i]
+            line[0] = re.sub("chr", "", line[0])
+            fai[i] = line
         fai = {line[0]:line[1:] for line in fai}
         ## Find last written position
         fsize = os.stat(args.output).st_size
@@ -104,8 +108,7 @@ if __name__ == "__main__":
                                 if len(bases) > 10:
                                         ref_count = bases.count(ref_base)
                                         af = ref_count/len(bases)
-                                        print(entry[0] + "\t" + str(entry[1]) + "\t" + str(int(entry[1]) + 1) + "\t" + format(af, '.6f') + "\t" + str(byte_count))
-                                        sys.stdout.flush()
+                                        sys.stdout.write(entry[0] + "\t" + str(entry[1]) + "\t" + str(int(entry[1]) + 1) + "\t" + format(af, '.6f') + "\t" + str(byte_count) + "\n")
                         entry = p.readline().strip().split("\t")
                         byte_count = p.tell()
                         if len(entry) < 2:

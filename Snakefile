@@ -210,8 +210,8 @@ rule copy_ncram:
         cram=lambda w: GS.remote(config["bams"][w.case]["normal"][w.lib]),
         crai=lambda w: GS.remote(config["bams"][w.case]["normal"][w.lib] + ".crai")
     output:
-        cram=temp("{output_dir}/scratch/{case}/{lib}/normal.cram"),
-        crai=temp("{output_dir}/scratch/{case}/{lib}/normal.cram.crai")
+        cram="{output_dir}/scratch/{case}/{lib}/normal.cram",
+        crai="{output_dir}/scratch/{case}/{lib}/normal.cram.crai"
     resources:
         cpus=2,
         mem_mb=MEM_PER_CPU,
@@ -227,8 +227,8 @@ rule copy_cram:
         cram=lambda w: GS.remote(config["bams"][w.case]["somatic"][w.lib]),
         crai=lambda w: GS.remote(config["bams"][w.case]["somatic"][w.lib] + ".crai")
     output:
-        cram=temp("{output_dir}/scratch/{case}/{lib}/somatic.cram"),
-        crai=temp("{output_dir}/scratch/{case}/{lib}/somatic.cram.crai")
+        cram="{output_dir}/scratch/{case}/{lib}/somatic.cram",
+        crai="{output_dir}/scratch/{case}/{lib}/somatic.cram.crai"
     resources:
         cpus=2,
         mem_mb=MEM_PER_CPU,
@@ -244,7 +244,7 @@ rule germline_cov:
         bam="{output_dir}/scratch/{case}/{normal}/normal.cram",
         bami="{output_dir}/scratch/{case}/{normal}/normal.cram.crai",
     output:
-        temp("{output_dir}/scratch/{case}/{normal}/normal/{chr}.bed"),
+        "{output_dir}/scratch/{case}/{normal}/normal/{chr}.bed",
     resources:
         cpus=2,
         mem_mb=MEM_PER_CPU,
@@ -262,7 +262,7 @@ rule germline_cov:
     benchmark:
         "{output_dir}/benchmark/{case}/{normal}/germline_cov{chr}.txt"
     shell:
-        "python3 scripts/depth.py -c {input.bam} -o {params.actual_output} -r {wildcards.chr} -q {params.qual} -m {params.maxd} -f {output} >> {params.actual_output} 2>> {log}"
+        "python3 scripts/depth2.py -c {input.bam} -o {params.actual_output} -r {wildcards.chr} -q {params.qual} -m {params.maxd} -f {output} >> {params.actual_output} 2>> {log}; rm {params.actual_output}"
 
 rule tumour_cov:
     """Compute per-base depth in tumour bam"""
@@ -270,7 +270,7 @@ rule tumour_cov:
         bam="{output_dir}/scratch/{case}/{tumour}/somatic.cram",
         bami="{output_dir}/scratch/{case}/{tumour}/somatic.cram.crai",
     output:
-        temp("{output_dir}/scratch/{case}/{tumour}/tumour/{chr}.bed"),
+        "{output_dir}/scratch/{case}/{tumour}/tumour/{chr}.bed",
     resources:
         cpus=2,
         mem_mb=MEM_PER_CPU,
@@ -286,9 +286,9 @@ rule tumour_cov:
     log:
         "{output_dir}/logs/germline_cov.{case}.{tumour}.{chr}.log",
     benchmark:
-        "{output_dir}/benchmark/{case}/{tumour}/germline_cov{chr}.txt"
+        "{output_dir}/benchmark/{case}/{tumour}/tumour__cov{chr}.txt"
     shell:
-        "python3 scripts/depth.py -c {input.bam} -o {params.actual_output} -r {wildcards.chr} -q {params.qual} -m {params.maxd} -f {output} >> {params.actual_output} 2>> {log}"
+        "python3 scripts/depth2.py -c {input.bam} -o {params.actual_output} -r {wildcards.chr} -q {params.qual} -m {params.maxd} -f {output} >> {params.actual_output} 2>> {log}; rm {params.actual_output}"
 
 rule concat_tumour:
     input:
@@ -326,7 +326,7 @@ rule concat_normal:
     benchmark:
         "{output_dir}/benchmark/{case}/{lib}/concat_normal.txt"
     shell:
-        "sort -k1,1 -k2,2n -S 300M -T tmp/ {input} > {output}"
+        "cat {input} > {output}"
         
 rule make_bins:
     input:
@@ -367,11 +367,11 @@ rule sort_bins:
     benchmark:
         "{output_dir}/benchmark/{case}/{normal}/sort_bins.txt"
     shell:
-        "sort -k1,1 -k2,2n -S 300M -T tmp/ {input} > {output} 2>> {log}"
+        "cat {input} > {output} 2>> {log}"
         
 rule genomecovsomatic:
     input:
-        depth=ancient("{output_dir}/scratch/{case}/{somatic}/tumour.bed"),
+        depth="{output_dir}/scratch/{case}/{somatic}/tumour.bed",
         window=rules.sort_bins.output
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed"),
@@ -384,12 +384,14 @@ rule genomecovsomatic:
         mem_mb=MEM_PER_CPU
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovsomatic.txt"
+    log:
+        "{output_dir}/logs/{case}/{somatic}_{normal}/genomecovsomatic.log"
     shell:
-        "python3 scripts/summarize_counts.py {input.depth} {input.window} > {output}"
+        "python3 scripts/summarize_counts2.py {input.depth} {input.window} > {output} 2>> {log}"
             
 rule genomecovnormal:
     input:
-        depth=ancient("{output_dir}/scratch/{case}/{normal}/normal.bed"),
+        depth="{output_dir}/scratch/{case}/{normal}/normal.bed",
         window=rules.sort_bins.output
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/normal.bed"),
@@ -402,8 +404,10 @@ rule genomecovnormal:
         mem_mb=MEM_PER_CPU
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/genomecovnormal.txt"
+    log:                                                                                                                                                                                                                                       
+        "{output_dir}/logs/{case}/{somatic}_{normal}/genomecovnormal.log"
     shell:
-        "python3 scripts/summarize_counts.py {input.depth} {input.window} > {output}"
+        "python3 scripts/summarize_counts2.py {input.depth} {input.window} > {output} 2>> {log}"
     
 rule sort_positions:
     """Sort the array positions file"""
@@ -423,7 +427,7 @@ rule sort_positions:
     benchmark:
         "{output_dir}/benchmark/sort_positions.txt"
     shell: 
-        "sort -k1,1 -k2,2n -S 200M {input} > {output}"
+        "sort -k1,1 -k2,2n -S 100M {input} > {output}"
 
 rule split_positions:
     """Split the array positions file by chromosome for parallel processing"""
@@ -493,7 +497,7 @@ rule concat_bafs:
     benchmark:
         "{output_dir}/benchmark/{case}/{somatic}_{normal}/concat_bafs.txt"
     shell:
-        "sort -k1,1 -k2,2n -S 300M -T tmp/ {input} > {output}"
+        "cat {input} > {output}"
 
 rule getgc:
     """Get GC content for each bin"""

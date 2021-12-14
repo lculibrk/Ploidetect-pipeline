@@ -27,50 +27,51 @@ threshold = int(sys.argv[2])
 chrom = None
 # Loop over input lines
 with open(infile) as f:
-    line = f.readline()
-    # File handling and santisation
-    line = line.rstrip("\n")
-    line = line.split("\t")
-    # If first iteration, set chrom to the first chromosome value
-    if not chrom:
-        chrom = line[CHROM]
-    # Check if new chromosome
-    if chrom != line[CHROM]:
-        # Output last chromosome, previous end (start), end of chromosome (lastknownend), count
-        out = [chrom, start, lastknownend, count]
-        # Convert out to strings and join them with tabs
-        out = [str(x) for x in out]
-        out = "\t".join(out)
-        # Print to stdout
-        print(out)
-        # Set new chromosome
-        chrom = line[CHROM]
-        # Set new start
-        start = int(line[START])
-        # STOP THE COUNT!
-        count = 0
-    # Check if all is normal and we continue with creating the bin
-    if count < threshold:
-        # Add to count
-        count += int(line[COUNT])
-        # Record end position of the count (in case new chromosome is skipped to)
-        lastknownend = int(line[START]) + 1
+    for line in f:
+        if line:
+            # File handling and santisation
+            line = line.rstrip("\n")
+            line = line.split("\t")
+            # If first iteration, set chrom to the first chromosome value
+            if not chrom:
+                chrom = line[CHROM]
+            # Check if new chromosome
+            if len(line) < 3:
+                continue
+            if chrom != line[CHROM]:
+                # Output last chromosome, previous end (start), end of chromosome (lastknownend), count
+                out = [chrom, start, lastknownend, count]
+                # Convert out to strings and join them with tabs
+                out = [str(x) for x in out]
+                out = "\t".join(out)
+                # Print to stdout
+                print(out)
+                # Set new chromosome
+                chrom = line[CHROM]
+                # Set new start
+                start = int(line[START])
+                # STOP THE COUNT!
+                count = 0
+        # Check if all is normal and we continue with creating the bin
+            if count < threshold:
+                # Add to count
+                count += int(line[COUNT])
+                # Record end position of the count (in case new chromosome is skipped to)
+                lastknownend = int(line[START]) + 1
     # If count exceeds threshold
-    if count >= threshold:
-        # Record end position
-        stop = int(line[START]) + 1
-        # Record chromosome
-        chrom = line[CHROM]
-        # Output chromosome, start of bin, end of bin, count
-        out = [chrom, start, stop, count]
-        # Convert out to strings and join them with tabs
-        out = [str(x) for x in out]
-        out = "\t".join(out)
-        # Set new start
-        start = int(line[START]) + 1
-        # STOP THE COUNT!
-        count = 0
-        # Print to stdout
-        print(out)
-    # Ensures un-buffered output to stdout
-    sys.stdout.flush()
+            if count >= threshold:
+                # Record end position
+                stop = int(line[START]) + 1
+                # Record chromosome
+                chrom = line[CHROM]
+                # Output chromosome, start of bin, end of bin, count
+                out = [chrom, start, stop, count]
+                # Convert out to strings and join them with tabs
+                out = [str(x) for x in out]
+                out = "\t".join(out) + "\n"
+                # Set new start
+                start = int(line[START]) + 1
+                # STOP THE COUNT!
+                count = 0
+                # Print to stdout
+                sys.stdout.write(out)
