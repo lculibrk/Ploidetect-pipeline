@@ -4,25 +4,10 @@
 # Outputs mean of stream over intervals in bins.txt
 # Outputs bins to stdout
 """
+import re
 import fileinput
 import sys
 import os
-
-[CHROM, START, COUNT] = range(3)
-
-# Initialize count and start variables
-count = 0
-nbins = 0
-start = stop = lastknownend = 0
-# Read infile
-infile = sys.argv[1]
-# Read bins file
-binfile = open(sys.argv[2])
-bin = binfile.readline().strip().split("\t")
-chrom = bin[0]
-start = int(bin[1])
-end = int(bin[2])
-
 
 def getwholeline(f, byte):
     if byte > os.path.getsize(f):
@@ -126,15 +111,8 @@ def position_calculator(index_dict, chrom, pos, dplen = 5):
     s = offset + (base_line * pos) + digit_count(pos)
     return(s)
 
-## Loop over bin lines
-index = index_chromosomes(sys.argv[1])
 
-#print("Position with hunga bunga method:")
-#print(hunga_bunga(int(sys.argv[3])))
 
-#print("\n")
-#print("Position with mathy method:")
-#print(digit_count(int(sys.argv[3])))
 def bytesto(bytes, to, bsize=1024):
     """convert bytes to megabytes, etc.
        sample code:
@@ -150,100 +128,79 @@ def bytesto(bytes, to, bsize=1024):
 
     return(r)
 #print(getwholeline(sys.argv[1], position_calculator(index, "1", int(sys.argv[3]), 5)))
-import re
-b_limit = 10000000
-halt = False
-f = open(sys.argv[1])
-with open(sys.argv[2]) as bins:
-    for b in bins:    
-        b = b.strip().split()
-        chrom = b[0]
-        const_len = len(chrom) + 8
-        start = int(b[1])
-        end = int(b[2])
-        running_sum = 0
-        n = 0
-        linestart = position_calculator(index, chrom, start)
-        lineend = position_calculator(index, chrom, end - 1)
-#        print(b)
-        #print(getwholeline(sys.argv[1], linestart))
-        #print(getwholeline(sys.argv[1], lineend))
-        f.seek(linestart, 0)
-        read_start = linestart
-        read_end = min([lineend, getwholeline(sys.argv[1], linestart + b_limit)["byte"]])
-        while read_end != lineend:
-#            print("Experimental stuff beginning")
-            read_bytes = read_end - read_start
-#            print(f"Supposed to end at {lineend}, but this is larger than 1Mb")
-#            print(f"instead ending at byte {read_bytes} for this chunk")
-            start_line = getwholeline(sys.argv[1], read_start)["line"]
-            end_line = getwholeline(sys.argv[1], read_end)["line"]
-#            print(f"start line of interval: \n {start_line}")
-#            print(f"end line of interval: \n {end_line}")
-            lines = f.readlines(read_bytes - 1)
+
+if __name__ == "__main__":
+
+    [CHROM, START, COUNT] = range(3)
+
+    # Initialize count and start variables
+    count = 0
+    nbins = 0
+    start = stop = lastknownend = 0
+    # Read infile
+    infile = sys.argv[1]
+    # Read bins file
+    binfile = open(sys.argv[2])
+    bin = binfile.readline().strip().split("\t")
+    chrom = bin[0]
+    start = int(bin[1])
+    end = int(bin[2])
+
+    ## Loop over bin lines
+    index = index_chromosomes(sys.argv[1])
+
+
+    b_limit = 10000000
+    halt = False
+    f = open(sys.argv[1])
+    with open(sys.argv[2]) as bins:
+        for b in bins:    
+            b = b.strip().split()
+            chrom = b[0]
+            const_len = len(chrom) + 8
+            start = int(b[1])
+            end = int(b[2])
+            running_sum = 0
+            n = 0
+            linestart = position_calculator(index, chrom, start)
+            lineend = position_calculator(index, chrom, end - 1)
+    #        print(b)
+            #print(getwholeline(sys.argv[1], linestart))
+            #print(getwholeline(sys.argv[1], lineend))
+            f.seek(linestart, 0)
+            read_start = linestart
+            read_end = min([lineend, getwholeline(sys.argv[1], linestart + b_limit)["byte"]])
+            while read_end != lineend:
+    #            print("Experimental stuff beginning")
+                read_bytes = read_end - read_start
+    #            print(f"Supposed to end at {lineend}, but this is larger than 1Mb")
+    #            print(f"instead ending at byte {read_bytes} for this chunk")
+                start_line = getwholeline(sys.argv[1], read_start)["line"]
+                end_line = getwholeline(sys.argv[1], read_end)["line"]
+    #            print(f"start line of interval: \n {start_line}")
+    #            print(f"end line of interval: \n {end_line}")
+                lines = f.readlines(read_bytes - 1)
+                while lines[-1][0:len(chrom)] != chrom:
+                    lines.pop()
+                for line in lines:
+                    running_sum += int(line[-6:-1])
+                    pos = int(line[(len(chrom)+1):-7])
+                    if pos < start or pos > end:
+                        raise ValueError(f"Position of {pos} outside bound of ({start}, {end})")
+                n += len(lines)
+                read_start = read_end
+                read_end = min([lineend, getwholeline(sys.argv[1], read_start + b_limit)["byte"]])
+            bytes_to_read = read_end - read_start
+            lines = f.readlines(bytes_to_read-1)
             while lines[-1][0:len(chrom)] != chrom:
                 lines.pop()
+            n += len(lines)
             for line in lines:
                 running_sum += int(line[-6:-1])
                 pos = int(line[(len(chrom)+1):-7])
                 if pos < start or pos > end:
                     raise ValueError(f"Position of {pos} outside bound of ({start}, {end})")
-            n += len(lines)
-            read_start = read_end
-            read_end = min([lineend, getwholeline(sys.argv[1], read_start + b_limit)["byte"]])
-        bytes_to_read = read_end - read_start
-        lines = f.readlines(bytes_to_read-1)
-        while lines[-1][0:len(chrom)] != chrom:
-            lines.pop()
-        n += len(lines)
-        for line in lines:
-            running_sum += int(line[-6:-1])
-            pos = int(line[(len(chrom)+1):-7])
-            if pos < start or pos > end:
-                raise ValueError(f"Position of {pos} outside bound of ({start}, {end})")
-        #lines = [int(line[2]) for line in lines if line]
-        print("\t".join(b) + "\t" + str(running_sum/n))
-        sys.stdout.flush()
-f.close()
-
-sys.exit()
-
-
-# Loop over input lines
-with open(infile) as f:
-    for line in f:
-        if len(line) >= 3:
-            # File handling and santisation
-            line = line.rstrip("\n")
-            line = line.split("\t")
-            ## Check if chromosome exceeded                                                                                                                                                                                                    
-            if line[CHROM] != chrom or int(line[START]) > end:
-                if nbins > 0:
-                    m = count/float(nbins)
-                    outline = str(chrom) + "\t" + str(start) + "\t" + str(end) + "\t" + str(m)
-                    print(outline)
-                    sys.stdout.flush()
-                    count = int(line[COUNT])
-                    nbins = 1
-                bin = binfile.readline().strip().split("\t")
-                if bin:
-                    chrom = bin[0]
-                    start = int(bin[1])
-                    end = int(bin[2])
-                continue
-            count = count + int(line[COUNT])
-            nbins = nbins + 1
-            ## Check if end of interval
-            if int(line[START]) == end:
-                m = count/float(nbins)
-                outline = str(chrom) + "\t" + str(start) + "\t" + str(end) + "\t" + str(m)
-                print(outline)
-                sys.stdout.flush()
-                bin = binfile.readline().strip().split("\t")
-                if bin:
-                    chrom = bin[0]
-                    start = int(bin[1])
-                    end = int(bin[2])
-                    nbins = 0
-                    count = 0
-binfile.close()
+            #lines = [int(line[2]) for line in lines if line]
+            print("\t".join(b) + "\t" + str(running_sum/n))
+            sys.stdout.flush()
+    f.close()
