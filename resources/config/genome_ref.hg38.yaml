@@ -9,7 +9,7 @@ annotation:
 array_positions:
     hg38:
         "resources/snp_arrays/hg38/SNP_array_positions.txt"
-ref_chromosomes:
+chromosome_defaults:
     hg38:
         - chr1
         - chr2
@@ -34,4 +34,3 @@ ref_chromosomes:
         - chr21
         - chr22
         - chrX
-        - chrY

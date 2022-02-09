@@ -4,7 +4,7 @@
 #   eg. config['chromosomes'] as list vs config['chromosomes']['hg38'] as list
 
 # snakefmt cannot understand 'configfile:' inside an if statement and will fail on this script
-if "ref_chromosomes" not in config:
+if "chromosome_defaults" not in config:
     for ref in ["hg19", "hg38"]:
         def_ref_yaml = os.path.join(workflow.basedir, f"resources/config/genome_ref.{ref}.yaml")
         logger.warning(f"Loading reference defaults from: {def_ref_yaml}")

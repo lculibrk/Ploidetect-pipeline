@@ -27,7 +27,7 @@ Use --config options such as:
     biopsy: eg 'biop2' (optional) - find libraries tumour_lib & normal_lib by bioapps_api.
     tumour_lib: Required if no biopsy given for bioapps lookup.
     normal_lib:  Required if no biopsy given for bioapps lookup.
-    genome_reference: (optional) - force hg19 or hg38 bam (ignore 'tumour_char' status)
+    genome_name: (optional) - force hg19 or hg38 bam (ignore 'tumour_char' status)
     gsc_config_filename: (optional) specify output config filename
     project: (optional) specify project
 
@@ -58,21 +58,23 @@ case = config["id"]
 somatic = config["tumour_lib"]
 normal = config["normal_lib"]
 
-if "genome_reference" in config.keys():
-    genome_reference = config["genome_reference"]
+if "genome_name" in config.keys():
+    genome_name = config["genome_name"]
 else:
     logger.warning(f"Warning no reference - finding from {somatic} bam")
     _, genome_reference = get_bam(somatic)
-    genome_reference = genome_reference2genome_name(genome_reference)
-    logger.warning(f"Found genome_reference: {genome_reference}")
-
+    genome_name = genome_reference2genome_name(genome_reference)
+    logger.warning(f"Found genome_reference: {genome_name}")
 
 # Load default values for references / annotations, etc.
 configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")
 configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.hg19.yaml")
 configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.hg38.yaml")
+configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
 
-
+config["genome_name"] = genome_name
+if "chromosomes" not in config:
+    config["chromosomes"] = config["chromosome_defaults"][genome_name]
 # Use local clone for now, for rapid development.
 # TODO: use singularity deployment reliablity in future.
 if "ploidetect_ver" not in config:
@@ -91,7 +93,7 @@ else:
         ploidetect_ver=config["ploidetect_ver"],
         project=config["project"] if "project" in config.keys() else None,
     )
-    output_dir = os.path.join(output_dir, genome_reference)
+    output_dir = os.path.join(output_dir, genome_name)
 
 # Find an output filename for the config we are generating
 if "gsc_config_filename" in config.keys():
@@ -106,16 +108,17 @@ if not os.path.exists(gsc_config_filename):
     args.pipeline_ver = pipeline_ver
     args.output_file = gsc_config_filename
     args.patient_id = args.id
-    args.genome_reference = genome_reference
+    args.genome_reference = genome_name
     build_config(args=args)
+    print(sorted(config.keys()))
 
 # Run the standard Snakemake pipeline with the appropriate config
 print(f"config: {os.path.abspath(gsc_config_filename)}")
 config = dict()  # Remove any existing values
 
-
 configfile: gsc_config_filename
-
+print(sorted(config.keys()))
+print(f'config["genome_name"]:{config["genome_name"]}')
 
 # GSC specific - set scratch subfolder as a symlink.
 #   A symlink to trans_scratch prevents the project directory from snapshot

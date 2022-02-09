@@ -292,7 +292,12 @@ def build_config(
     yaml_lines.append(f"install_ploidetect: {1 if bool(install_ploidetect) else 0}")
 
     config = yaml.load("\n".join(yaml_lines))
+    # Store all additional values given
+    for k, v in kwargs.items():
+        if k not in config.keys():
+            config[k] = v
 
+    logger.info(f"Loading genome reference data from f{run_params_yaml}")
     run_params = yaml.load(open(run_params_yaml))
     for k, v in run_params.items():
         if k not in config.keys():
@@ -311,7 +316,6 @@ def build_config(
                 config[k] = v
             else:
                 config[k].update(v)
-
     return config
 
 

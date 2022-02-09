@@ -9,7 +9,7 @@ annotation:
 array_positions:
     hg19:
         "resources/snp_arrays/hg19/SNP_array_positions.txt"
-ref_chromosomes:
+chromosome_defaults:
     hg19:
         - 1
         - 2
@@ -34,4 +34,3 @@ ref_chromosomes:
         - 21
         - 22
         - X
-        - Y
