@@ -80,6 +80,8 @@ annotation:
         /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
     hg38:
         /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
+cyto_path:
+    auto
 
 ## Sequence type
 ont:

@@ -100,14 +100,13 @@ with open(array_positions) as f:
         raise(WorkflowSetupError("More than two columns detected in snp position data - file must contain only chromosome and position columns"))
 
 
-
 cyto_path = config["cyto_path"] if "cyto_path" in config else ""
 if cyto_path == "auto":
     ## Try to automatically get cytobands based on genome name
     hgver = config["genome_name"]
     connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
     if connec.status_code == 200:
-        cyto_path = f"resources/{hgver}/cytobands.txt"
+        cyto_path = f"{workflow.basedir}/resources/{hgver}/cytobands.txt"
     else:
         raise WorkflowSetupError("Cytoband file is set to auto-detect, but could not download cytoband file. Make sure you didn't misspell the genome file, leave the cyto_path blank in the config, or explicitly set a path for it")
 cyto_arg = f"-c {cyto_path}" if cyto_path else ""
@@ -195,7 +194,8 @@ rule download_cytobands:
             )
         ),
     output:
-        expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
+        expand("{install_dir}/resources/{hgver}/cytobands.txt",
+                install_dir=workflow.basedir, hgver=config["genome_name"]),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
