@@ -54,15 +54,15 @@ chromosome_defaults:
 mem_per_cpu: 7900
 
 # Blank if want to use only automated purity/ploidy
-models:
-    COLO829-TestA:
-        A36971:
-            tp: 1
-            ploidy: 3
+#models:
+#    COLO829-TestA:
+#        A36971:
+#            tp: 1
+#            ploidy: 3
 
 # genome_name should match bams
 genome_name:
-    "hg19"
+    "hg38"
 
 ## genome
 genome:
