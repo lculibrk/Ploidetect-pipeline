@@ -66,11 +66,13 @@ else:
     genome_name = genome_reference2genome_name(genome_reference)
     logger.warning(f"Found genome_reference: {genome_name}")
 
+
 # Load default values for references / annotations, etc.
 configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")
 configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.hg19.yaml")
 configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.hg38.yaml")
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
+
 
 config["genome_name"] = genome_name
 if "chromosomes" not in config:
@@ -116,7 +118,10 @@ if not os.path.exists(gsc_config_filename):
 print(f"config: {os.path.abspath(gsc_config_filename)}")
 config = dict()  # Remove any existing values
 
+
 configfile: gsc_config_filename
+
+
 print(sorted(config.keys()))
 print(f'config["genome_name"]:{config["genome_name"]}')
 
