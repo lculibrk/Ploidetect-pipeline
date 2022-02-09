@@ -101,7 +101,6 @@ with open(array_positions) as f:
 
 
 
-
 cyto_path = config["cyto_path"] if "cyto_path" in config else ""
 if cyto_path == "auto":
     ## Try to automatically get cytobands based on genome name
