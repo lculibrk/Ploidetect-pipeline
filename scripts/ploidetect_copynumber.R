@@ -6,14 +6,15 @@
 # Docopt script docstring
 ' ploidetect_copynumber.R
 
-Usage:
-ploidetect_copynumber.R -i input -m models.txt -p plots.pdf -o output.txt [--size=SIZE]
+Usage: 
+ploidetect_copynumber.R -i input -m models.txt -p plots.pdf -o output.txt [-c cyto --size=SIZE]
 
 Options:
 -i	--input	input	input .RDS data file
 -m	--models	models	input .txt file of desired models for copy number calling
 -p	--plots	plots	output plots file
 -o	--output	output	output file
+-c	--cyto	cytos	cytoband file
 		--size	maximum iterations to increase resolution [default: Inf]
 
 ' -> doc
@@ -39,18 +40,20 @@ in_rds = readRDS(args$input)
 # Read purity/ploidy models
 in_models = read.table(file = args$models, sep = "\t", stringsAsFactors=F, header = T)
 #
-# Load centromere positions packaged with Ploidetect
-data(centromeres)
-#
+# Load centromere positions
+if("cyto" %in% names(args)){
+	cytobands = fread(args$cyto)
+}else{
+	cytobands = F
+}
+# 
 # Check if Ploidetect couldn't detect purity/ploidy from cnv information and default to 100% purity and diploid
 if(ncol(in_models) == 1){
  in_models = data.frame("tp" = 1, "ploidy" = 2)
 }
 #
 # Run ploidetect_cna_sc (subclone aware CNV caller)
-result = ploidetect_cna_sc(all_data = in_rds$all_data, segmented_data = in_rds$segmented_data, tp = in_models$tp[1], ploidy = in_models$ploidy[1], maxpeak=in_rds$maxpeak, verbose = T, max_iters = args$size)
-print(str(result))
-print(names(result))
+result = ploidetect_cna_sc(all_data = in_rds$all_data, segmented_data = in_rds$segmented_data, tp = in_models$tp[1], ploidy = in_models$ploidy[1], maxpeak=in_rds$maxpeak, verbose = T, max_iters = args$size, cytobands = cytobands)
 # Get the cna plots from result object
 cna_plots = result$cna_plots
 # Get CNV objects from result object

@@ -10,14 +10,15 @@
 # docopt script docstring
 ' run_ploidetect2.R
 
-Usage:
-run_ploidetect2.R -i input -p plots.pdf -r rds.rds -o output.txt
+Usage: 
+run_ploidetect2.R -i input -p plots.pdf -r rds.rds -o output.txt [-c cyto]
 
 Options:
 -i --input input      input .RDS data file
 -p --plots plots      output plots file
 -o --output output    output file
 -r --rds rds	      output .RDS
+-c --cytos cytos      cytobands file
 ' -> doc
 # load libraries
 library(docopt)

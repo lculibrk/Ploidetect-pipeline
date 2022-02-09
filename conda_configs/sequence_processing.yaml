@@ -3,9 +3,9 @@ channels:
  - r
 dependencies:
  - bedtools
- - python=3.6
- - samtools
- - r-essentials
+ - python
+ - samtools>=1.9
+ - r-essentials=3.6.0
  - r-dplyr
  - r-docopt
  - bioconductor-genomicranges

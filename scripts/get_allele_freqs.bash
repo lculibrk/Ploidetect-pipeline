@@ -27,6 +27,9 @@ then
     usage
     exit
 fi
+
+# Pipefail
+set -euo pipefail
 #
 # Create directory if doesn't exist
 [[ -d $5 ]] || mkdir $5
