@@ -13,10 +13,12 @@ MEM_PER_CPU = 7900
 
 print(f"Ploidetect-pipeline {VERSION}")
 
+
 ## Load config values
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
 configfile: os.path.join(workflow.basedir, "config/samples.yaml")
 configfile: os.path.join(workflow.basedir, "config/parameters.yaml")
+
 
 MEM_PER_CPU = config["mem_per_cpu"] if "mem_per_cpu" in config else MEM_PER_CPU
 
@@ -31,7 +33,11 @@ else:
     chromosomes = config["chromosomes"]
 
 if len(chromosomes) == 0:
-    raise(WorkflowSetupError("No valid chromosomes found. If you're using a non-standard genome (not hg38 or hg19), you must explicitly specify chromosome names in the config"))
+    raise (
+        WorkflowSetupError(
+            "No valid chromosomes found. If you're using a non-standard genome (not hg38 or hg19), you must explicitly specify chromosome names in the config"
+        )
+    )
 
 if "genome" in config:
     if config["genome_name"] in config["genome"]:
@@ -45,11 +51,18 @@ else:
 
 if genome_path == "failed":
     hgver = config["genome_name"]
-    connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
+    connec = requests.get(
+        f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz"
+    )
     if connec.status_code == 200:
         genome_path = f"resources/{hgver}/genome.fa"
     else:
-        raise(WorkflowSetupError("Genome fasta file not found in config or on UCSC. Specify a path to your genome fasta"))
+        raise (
+            WorkflowSetupError(
+                "Genome fasta file not found in config or on UCSC. Specify a path to your genome fasta"
+            )
+        )
+
 
 include: "defaults.smk"
 
@@ -93,22 +106,34 @@ with open(array_positions) as f:
     snp_chrs = list(set(snp_chrs))
     for chromosome in chromosomes:
         if str(chromosome) not in snp_chrs:
-            raise(WorkflowSetupError(f"Chromosome {chromosome} specified in config was not found in provided snp position data"))
+            raise (
+                WorkflowSetupError(
+                    f"Chromosome {chromosome} specified in config was not found in provided snp position data"
+                )
+            )
     lens = [len(line) for line in snp_positions]
     print(lens[0])
     if any(leng > 2 for leng in lens):
-        raise(WorkflowSetupError("More than two columns detected in snp position data - file must contain only chromosome and position columns"))
+        raise (
+            WorkflowSetupError(
+                "More than two columns detected in snp position data - file must contain only chromosome and position columns"
+            )
+        )
 
 
 cyto_path = config["cyto_path"] if "cyto_path" in config else ""
 if cyto_path == "auto":
     ## Try to automatically get cytobands based on genome name
     hgver = config["genome_name"]
-    connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
+    connec = requests.get(
+        f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz"
+    )
     if connec.status_code == 200:
         cyto_path = f"{workflow.basedir}/resources/{hgver}/cytobands.txt"
     else:
-        raise WorkflowSetupError("Cytoband file is set to auto-detect, but could not download cytoband file. Make sure you didn't misspell the genome file, leave the cyto_path blank in the config, or explicitly set a path for it")
+        raise WorkflowSetupError(
+            "Cytoband file is set to auto-detect, but could not download cytoband file. Make sure you didn't misspell the genome file, leave the cyto_path blank in the config, or explicitly set a path for it"
+        )
 cyto_arg = f"-c {cyto_path}" if cyto_path else ""
 
 ## Parse sample information
@@ -128,12 +153,15 @@ for sample in sample_ids:
     concat_bams = list(somatic_paths) + list(normal_paths)
     for bam in concat_bams:
         if not os.path.exists(bam):
-            raise WorkflowSetupError(f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity")
+            raise WorkflowSetupError(
+                f"Input file {bam} could not be found. Ensure that the file is spelled correctly, and that you've correctly bound the directory if using singularity"
+            )
     combinations = expand("{somatic}_{normal}", somatic=somatics, normal=normals)
     outs = [os.path.join(output_dir, sample, comb, "cna.txt") for comb in combinations]
     output_list.extend(outs)
 
 print(f"Final outputs: {output_list}")
+
 
 rule all:
     input:
@@ -174,9 +202,9 @@ rule ploidetect_install:
     conda:
         "conda_configs/r.yaml"
     params:
-        install_cmd = ploidetect_install_cmd,
+        install_cmd=ploidetect_install_cmd,
     log:
-        expand("{output_dir}/logs/ploidetect_install.log", output_dir = output_dir)
+        expand("{output_dir}/logs/ploidetect_install.log", output_dir=output_dir),
     shell:
         "date >> {log}; echo {params} >> {log}; "
         "export LC_ALL=en_US.UTF-8; "
@@ -194,8 +222,11 @@ rule download_cytobands:
             )
         ),
     output:
-        expand("{install_dir}/resources/{hgver}/cytobands.txt",
-                install_dir=workflow.basedir, hgver=config["genome_name"]),
+        expand(
+            "{install_dir}/resources/{hgver}/cytobands.txt",
+            install_dir=workflow.basedir,
+            hgver=config["genome_name"],
+        ),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -204,6 +235,7 @@ rule download_cytobands:
     shell:
         "gunzip -c {input} | sed 's/chr//g' > {output}"
 
+
 rule download_genome:
     input:
         HTTP.remote(
@@ -211,10 +243,10 @@ rule download_genome:
                 "https://hgdownload.soe.ucsc.edu/goldenPath/{hgver}/bigZips/{hgver}.fa.gz",
                 hgver=config["genome_name"],
             )
-        )
+        ),
     output:
-        expand("resources/{hgver}/genome.fa", hgver = config["genome_name"]),
-        expand("resources/{hgver}/genome.fa.fai", hgver = config["genome_name"]),
+        expand("resources/{hgver}/genome.fa", hgver=config["genome_name"]),
+        expand("resources/{hgver}/genome.fa.fai", hgver=config["genome_name"]),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -224,6 +256,7 @@ rule download_genome:
         "docker://lculibrk/ploidetect"
     shell:
         "gunzip -c {input} > {output[0]}; samtools faidx {output[0]}"
+
 
 rule germline_cov:
     """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins"""
@@ -250,6 +283,7 @@ rule germline_cov:
         " | awk -v FS='\\t' -v OFS='\\t' 'NR > 1{{print $1, $2, $2+1, $3}}'"
         " | python3 {params.scripts_dir}/make_windows.py - {params.threshold} 2>> {log}"
         " | bedtools sort -i stdin > {output}  2>> {log}"
+
 
 rule merge_germline:
     """Merge multi-chromosome output from germline_cov into single file"""
@@ -418,7 +452,7 @@ rule compute_loh:
     input:
         sombam=lambda w: config["bams"][w.case]["somatic"][w.somatic],
         normbam=lambda w: config["bams"][w.case]["normal"][w.normal],
-        genome = genome_path
+        genome=genome_path,
     output:
         folder=directory("{output_dir}/scratch/{case}/{somatic}_{normal}/loh_tmp"),
         loh=temp("{output_dir}/scratch/{case}/{somatic}_{normal}/loh_tmp/loh_raw.txt"),
@@ -472,10 +506,9 @@ rule getgc:
     """Get GC content for each bin"""
     input:
         window=rules.makewindowfile.output,
-        genome = genome_path,
+        genome=genome_path,
     output:
         temp("{output_dir}/scratch/{case}/{somatic}_{normal}/gc.bed"),
-    params:
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -511,16 +544,19 @@ rule mergedbed:
         "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
     shell:
         "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc})"
-        "| sed 's/chr//g' > {output}" ## Cuts out any "chr" if using hg38
+        "| sed 's/chr//g' > {output}"
         " 2> {log}"
         " && ls -l {output} >> {log}"
+        ## Cuts out any "chr" if using hg38
 
 
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
         merged="{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
-        install=rules.ploidetect_install.output if workflow.use_conda and not workflow.use_singularity else __file__,
+        install=rules.ploidetect_install.output
+        if workflow.use_conda and not workflow.use_singularity
+        else __file__,
         cytos=cyto_path,
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
@@ -563,7 +599,7 @@ rule ploidetect:
         "docker://lculibrk/ploidetect"
     params:
         scripts_dir=scripts_dir,
-        cyto_arg = cyto_arg,
+        cyto_arg=cyto_arg,
     log:
         "{output_dir}/logs/ploidetect.{case}.{somatic}_{normal}.log",
     shell:
@@ -639,7 +675,7 @@ rule ploidetect_copynumber:
         mem_mb=24 * MEM_PER_CPU,
     params:
         scripts_dir=scripts_dir,
-        cyto_arg = cyto_arg,
+        cyto_arg=cyto_arg,
     log:
         "{output_dir}/logs/ploidetect_copynumber.{case}.{somatic}_{normal}.log",
     shell:
