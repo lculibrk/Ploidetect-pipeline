@@ -23,14 +23,14 @@ GENOME_REF_YAMLS = [join(DEFAULTS_FOLDER, f"genome_ref.{ref}.yaml") for ref in R
 DEFAULT_RUN_YAML = join(DEFAULTS_FOLDER, "default_run_params.yaml")
 
 
-def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
+def get_biopsy_dna_tumour_normal(id, biopsy="biop1"):
     """Return DNA (tumour, normal) for the patient biopsy.
 
     Example:
         >>> get_biopsy_dna_tumour_normal("POG965", biopsy="biop2")
         ('P02866', 'P02590')
     """
-    libs = API.get_lib_names(patient_id)
+    libs = API.get_lib_names(id)
     normals = [
         lib for lib in libs if API.is_normal_library(lib) and API.is_dna_library(lib)
     ]
@@ -42,9 +42,9 @@ def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
     return (tumour_libs[0], normals[0])
 
 
-def get_project_info(patient_id):
+def get_project_info(id):
     """Return a single project_info dict for the patient."""
-    proj_info = API.get_biofx_project_info(patient_id, tumour_char_only=True)
+    proj_info = API.get_biofx_project_info(id, tumour_char_only=True)
     if len(proj_info) > 1:
         logger.error(
             f"Assuming project: {proj_info[0]['name']}"
@@ -53,7 +53,7 @@ def get_project_info(patient_id):
     return proj_info[0]
 
 
-def get_somatic_folder(patient_id, tumour_lib, normal_lib, project=None):
+def get_somatic_folder(id, tumour_lib, normal_lib, project=None, genome_name=None):
     """Return the 'somatic' paired analysis folder.
 
     Example:
@@ -61,12 +61,21 @@ def get_somatic_folder(patient_id, tumour_lib, normal_lib, project=None):
         >>> get_somatic_folder("POG965", tumour, normal)
         '/projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590'
     """
-    project_path = (
-        API.get_biofx_project_path(project)
-        if project
-        else get_project_info(patient_id)["path"]
-    )
-    glob_str = f"{project_path}/{patient_id}/*/*_t_{tumour_lib}*_n_{normal_lib}"
+    patient_proj_info = get_project_info(id)
+    patient_project = patient_proj_info["name"]
+    patient_project_path = patient_proj_info["path"]
+    project = project if project else patient_project
+
+    if patient_project != project:
+        logger.error(f"Project conflict - {project} vs {id} defined {patient_project}")
+
+    project_path = API.get_biofx_project_path(project, genome_name) or patient_project_path
+    if patient_project_path != project_path:
+        logger.error(
+            f"Conflicting project paths - using ({project}, {genome_name}): {project_path} instead of {id}: {patient_project_path}"
+        )
+
+    glob_str = f"{project_path}/{id}/*/*_t_{tumour_lib}*_n_{normal_lib}"
     somatic_folders = glob.glob(glob_str)
     if not somatic_folders:
         raise ValueError(f"Failed to find somatic folder.  Checked '{glob_str}'")
@@ -78,7 +87,7 @@ def get_somatic_folder(patient_id, tumour_lib, normal_lib, project=None):
 
 
 def get_ploidetect_temp_folder(
-    patient_id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=None
+    id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=None, genome_name=None, job_id=None
 ):
     """GSC trans_scratch temp folder.
 
@@ -88,24 +97,30 @@ def get_ploidetect_temp_folder(
     """
     TEMP_ROOT = "/projects/trans_scratch/validations/Ploidetect"
     if not project:
-        project = get_project_info(patient_id)["name"]
-    return join(
+        project = get_project_info(id)["name"]
+    scratch_path = join(
         TEMP_ROOT,
         project,
-        patient_id,
+        id,
         "Ploidetect-pipeline-" + pipeline_ver,
         "Ploidetect-" + ploidetect_ver,
         f"{tumour_lib}_{normal_lib}",
     )
+    if genome_name:
+        scratch_path = join(scratch_path, genome_name)
+    if job_id:
+        scratch_path = join(scratch_path, job_id)
+    return scratch_path
 
 
 def get_gsc_output_folder(
-    patient_id,
+    id,
     tumour_lib,
     normal_lib,
     pipeline_ver,
     ploidetect_ver,
     project=None,
+    genome_name=None,
 ):
     """GSC final project output folder.
 
@@ -114,25 +129,28 @@ def get_gsc_output_folder(
         '/projects/POG/POG_data/POG965/wgs/biop2_t_P02866_blood1_n_P02590/Ploidetect/Ploidetect-pipeline-0.0.1/Ploidetect-v1.0.0'
     """
     somatic_pair_folder = get_somatic_folder(
-        patient_id, tumour_lib, normal_lib, project=project
+        id, tumour_lib, normal_lib, project=project, genome_name=genome_name
     )
-    return join(
+    retval = join(
         somatic_pair_folder,
         "Ploidetect",
         "Ploidetect-pipeline-" + pipeline_ver,
         "Ploidetect-" + ploidetect_ver,
     )
+    if genome_name:
+        retval = join(retval, genome_name)
+    return retval
 
 
-def get_bam(library, genome_reference=None):
+def get_bam(library, genome_name=None):
     """Find a bam for library.  Restricted genome_refernce if given.
 
     Returns (library, genome_reference)
     """
-    bams_all = API.get_bam_info_from_library(library, reference=genome_reference)
-    if genome_reference:
+    bams_all = API.get_bam_info_from_library(library)
+    if genome_name:
         bams_all = [
-            bd for bd in bams_all if bd["genome_reference"].startswith(genome_reference)
+            bd for bd in bams_all if bd["genome_reference"].startswith(genome_name)
         ]
 
     bams = []
@@ -143,7 +161,7 @@ def get_bam(library, genome_reference=None):
         else:
             bams.append(bam)
 
-    assert bams, f"Bam finding error for: '{library}' (ref: {genome_reference})"
+    assert bams, f"Bam finding error for: '{library}' (ref: {genome_name})"
 
     bams.sort(key=lambda x: bool(x["tumour_char"]), reverse=True)
     for bam in bams[1:]:
@@ -153,7 +171,7 @@ def get_bam(library, genome_reference=None):
     bam_fns = glob.glob(join(bams[0]["data_path"], "*.bam"))
     assert (
         len(bam_fns) == 1
-    ), f"Bam finding error for: '{library}' (ref: {genome_reference})"
+    ), f"Bam finding error for: '{library}' (ref: {genome_name})"
     return (bam_fns[0], bams[0]["genome_reference"])
 
 
@@ -166,15 +184,16 @@ def genome_reference2genome_name(gsc_genome_reference):
 
 
 def build_config(
-    patient_id,
+    id,
     biopsy=None,
     tumour_lib=None,
     normal_lib=None,
-    genome_reference=None,
+    genome_name=None,
     pipeline_ver="undefined",
     ploidetect_ver="undefined",
     install_ploidetect=False,
     project=None,
+    output_dir="",
     ref_yamls=GENOME_REF_YAMLS,
     run_params_yaml=DEFAULT_RUN_YAML,
     **kwargs,
@@ -236,24 +255,30 @@ def build_config(
         - Y
     """
     TAB = "  "
-    yaml_lines = []
     yaml = YAML()
+
+    # Keep input parameters
+    prog_str = f'Created by: {realpath(abspath(__file__))} at {datetime.now().strftime("%Y%m%d %H:%M:%S")}'
+    yaml_lines = [f"# {prog_str}"]
+    yaml_lines.append(f"id: {id}")
+    if biopsy:
+        yaml_lines.append(f"biopsy: {biopsy}")
 
     if not biopsy and not (tumour_lib and normal_lib):
         raise ValueError(
             "Either a biopsy or tumour_lib and normal_lib must be supplied."
         )
     elif biopsy:
-        tumour_lib, normal_lib = get_biopsy_dna_tumour_normal(patient_id, biopsy)
+        tumour_lib, normal_lib = get_biopsy_dna_tumour_normal(id, biopsy)
 
-    prog_str = f'Created by: {realpath(abspath(__file__))} at {datetime.now().strftime("%Y%m%d %H:%M:%S")}'
-    yaml_lines.append(f"# {prog_str}")
+    yaml_lines.append(f"tumour_lib: {tumour_lib}")
+    yaml_lines.append(f"normal_lib: {normal_lib}")
 
     # Find bams
     yaml_lines.append("bams:")
-    yaml_lines.append(f"{TAB}{patient_id}:")
-    tumour_bam_fn, genome_name = get_bam(tumour_lib, genome_reference)
-    normal_bam_fn, normal_genome_name = get_bam(normal_lib, genome_reference)
+    yaml_lines.append(f"{TAB}{id}:")
+    tumour_bam_fn, genome_name = get_bam(tumour_lib, genome_name)
+    normal_bam_fn, normal_genome_name = get_bam(normal_lib, genome_name)
 
     yaml_lines.append(f"{TAB}{TAB}somatic:")
     yaml_lines.append(f"{TAB}{TAB}{TAB}{tumour_lib}: {tumour_bam_fn}")
@@ -263,19 +288,30 @@ def build_config(
     assert genome_name == normal_genome_name
     yaml_lines.append(f"genome_name: {genome_reference2genome_name(genome_name)}")
 
-    # output_paths
-    yaml_lines.append(
-        f"output_dir: {get_gsc_output_folder(patient_id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=project)}"
-    )
-    temp_dir = get_ploidetect_temp_folder(
-        patient_id,
-        tumour_lib,
-        normal_lib,
-        pipeline_ver,
-        ploidetect_ver,
-        project=project,
-    )
-    temp_dir = join(temp_dir, datetime.now().strftime("%Y%m%d_%H%M%S"))
+    if not output_dir:
+        output_dir = get_gsc_output_folder(id,
+                                           tumour_lib,
+                                           normal_lib,
+                                           pipeline_ver,
+                                           ploidetect_ver,
+                                           project=project,
+                                           genome_name=genome_name)
+    yaml_lines.append(f"output_dir: {output_dir}")
+
+    # trans_scratch temp directory
+    if "temp_dir" in kwargs:
+        temp_dir = kwargs["temp_dir"]
+    else:
+        temp_dir = get_ploidetect_temp_folder(
+            id,
+            tumour_lib,
+            normal_lib,
+            pipeline_ver,
+            ploidetect_ver,
+            project=project,
+        )
+        temp_dir = join(temp_dir, datetime.now().strftime("%Y%m%d_%H%M%S"))
+        logger.warning(f"Derived GSC scratch folder: {temp_dir}")
     yaml_lines.append(f"temp_dir: {temp_dir}")
 
     # Ploidetect installation and versions.
@@ -301,6 +337,7 @@ def build_config(
     run_params = yaml.load(open(run_params_yaml))
     for k, v in run_params.items():
         if k not in config.keys():
+            logger.warning(f"Adding {k} from {run_params_yaml}")
             config[k] = v
 
     # Genomic Reference data
@@ -309,7 +346,7 @@ def build_config(
     # Values for reference should be under reference names to avoid conflicts. eg:
     #   ref['annotation']['hg38'] = <filepath_to_gtf>
     for ref_yaml_fn in ref_yamls:
-        logger.info(f"Loading genome reference data from f{ref_yaml_fn}")
+        logger.info(f"Loading genome reference data from {ref_yaml_fn}")
         ref = yaml.load(open(ref_yaml_fn))
         for k, v in ref.items():
             if k not in config:
@@ -332,7 +369,7 @@ def parse_args():
     parser.add_argument("--ploidetect-ver", required=True, help="Ploidetect Version")
     parser.add_argument(
         "-i",
-        "--patient-id",
+        "--id",
         required=True,
         help="GSC bioapps patient_id.  eg POG965",
     )
@@ -344,7 +381,7 @@ def parse_args():
     )
     parser.add_argument(
         "-o",
-        "--output-file",
+        "--gsc-config-filename",
         help="specify a config filename.",
         default=f"DERIVED_OUTPUT_DIR/{CONFIG_BASENAME}",
     )
@@ -381,24 +418,24 @@ def main(args=None):
 
     args = parse_args() if not args else args
 
-    if args.output_file and exists(args.output_file):
-        raise ValueError(f"Output config already exists: '{args.output_file}'")
+    if args.gsc_config_filename and exists(args.gsc_config_filename):
+        raise ValueError(f"Output config already exists: '{args.gsc_config_filename}'")
 
     config = build_config(**vars(args))
 
-    if not args.output_file:
+    if not args.gsc_config_filename:
         YAML().dump(config, sys.stdout)
     else:
-        args.output_file = args.output_file.replace(
+        args.gsc_config_filename = args.gsc_config_filename.replace(
             "DERIVED_OUTPUT_DIR", config["output_dir"]
         )
-        if exists(args.output_file):
-            raise ValueError(f"Output config already exists: '{args.output_file}'")
-        elif (dirname(args.output_file)) and not exists(dirname(args.output_file)):
-            logger.warning(f"Creating output folder: {dirname(args.output_file)}")
-            os.makedirs(dirname(args.output_file))
-        print(f"Writing config to: {abspath(realpath(args.output_file))}")
-        YAML().dump(config, open(args.output_file, "w"))
+        if exists(args.gsc_config_filename):
+            raise ValueError(f"Output config already exists: '{args.gsc_config_filename}'")
+        elif (dirname(args.gsc_config_filename)) and not exists(dirname(args.gsc_config_filename)):
+            logger.warning(f"Creating output folder: {dirname(args.gsc_config_filename)}")
+            os.makedirs(dirname(args.gsc_config_filename))
+        print(f"Writing config to: {abspath(realpath(args.gsc_config_filename))}")
+        YAML().dump(config, open(args.gsc_config_filename, "w"))
 
 
 if __name__ == "__main__":
