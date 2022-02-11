@@ -24,6 +24,7 @@ MEM_PER_CPU = config["mem_per_cpu"] if "mem_per_cpu" in config else MEM_PER_CPU
 
 ##### Default checks
 ## If chromosomes not specified, try to use defaults
+
 if "chromosomes" not in config:
     if config["genome_name"] in config["chromosome_defaults"].keys():
         chromosomes = config["chromosome_defaults"][config["genome_name"]]
@@ -67,11 +68,6 @@ if genome_path == "failed":
 include: "defaults.smk"
 
 
-chromosomes = (
-    config["ref_chromosomes"][config["genome_name"]]
-    if "chromosomes" not in config
-    else config["chromosomes"]
-)
 output_dir = config["output_dir"] if "output_dir" in config else "ploidetect_out"
 
 scripts_dir = os.path.join(workflow.basedir, "scripts")
@@ -121,7 +117,7 @@ with open(array_positions) as f:
         )
 
 
-cyto_path = config["cyto_path"] if "cyto_path" in config else ""
+cyto_path = config["cyto_path"] if "cyto_path" in config else "auto"
 if cyto_path == "auto":
     ## Try to automatically get cytobands based on genome name
     hgver = config["genome_name"]
