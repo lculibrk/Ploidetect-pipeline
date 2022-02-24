@@ -69,7 +69,9 @@ def get_somatic_folder(id, tumour_lib, normal_lib, project=None, genome_name=Non
     if patient_project != project:
         logger.error(f"Project conflict - {project} vs {id} defined {patient_project}")
 
-    project_path = API.get_biofx_project_path(project, genome_name) or patient_project_path
+    project_path = (
+        API.get_biofx_project_path(project, genome_name) or patient_project_path
+    )
     if patient_project_path != project_path:
         logger.error(
             f"Conflicting project paths - using ({project}, {genome_name}): {project_path} instead of {id}: {patient_project_path}"
@@ -87,7 +89,14 @@ def get_somatic_folder(id, tumour_lib, normal_lib, project=None, genome_name=Non
 
 
 def get_ploidetect_temp_folder(
-    id, tumour_lib, normal_lib, pipeline_ver, ploidetect_ver, project=None, genome_name=None, job_id=None
+    id,
+    tumour_lib,
+    normal_lib,
+    pipeline_ver,
+    ploidetect_ver,
+    project=None,
+    genome_name=None,
+    job_id=None,
 ):
     """GSC trans_scratch temp folder.
 
@@ -169,9 +178,7 @@ def get_bam(library, genome_name=None):
         logger.warning(warn)
 
     bam_fns = glob.glob(join(bams[0]["data_path"], "*.bam"))
-    assert (
-        len(bam_fns) == 1
-    ), f"Bam finding error for: '{library}' (ref: {genome_name})"
+    assert len(bam_fns) == 1, f"Bam finding error for: '{library}' (ref: {genome_name})"
     return (bam_fns[0], bams[0]["genome_reference"])
 
 
@@ -289,13 +296,15 @@ def build_config(
     yaml_lines.append(f"genome_name: {genome_reference2genome_name(genome_name)}")
 
     if not output_dir:
-        output_dir = get_gsc_output_folder(id,
-                                           tumour_lib,
-                                           normal_lib,
-                                           pipeline_ver,
-                                           ploidetect_ver,
-                                           project=project,
-                                           genome_name=genome_name)
+        output_dir = get_gsc_output_folder(
+            id,
+            tumour_lib,
+            normal_lib,
+            pipeline_ver,
+            ploidetect_ver,
+            project=project,
+            genome_name=genome_name,
+        )
     yaml_lines.append(f"output_dir: {output_dir}")
 
     # trans_scratch temp directory
@@ -430,9 +439,15 @@ def main(args=None):
             "DERIVED_OUTPUT_DIR", config["output_dir"]
         )
         if exists(args.gsc_config_filename):
-            raise ValueError(f"Output config already exists: '{args.gsc_config_filename}'")
-        elif (dirname(args.gsc_config_filename)) and not exists(dirname(args.gsc_config_filename)):
-            logger.warning(f"Creating output folder: {dirname(args.gsc_config_filename)}")
+            raise ValueError(
+                f"Output config already exists: '{args.gsc_config_filename}'"
+            )
+        elif (dirname(args.gsc_config_filename)) and not exists(
+            dirname(args.gsc_config_filename)
+        ):
+            logger.warning(
+                f"Creating output folder: {dirname(args.gsc_config_filename)}"
+            )
             os.makedirs(dirname(args.gsc_config_filename))
         print(f"Writing config to: {abspath(realpath(args.gsc_config_filename))}")
         YAML().dump(config, open(args.gsc_config_filename, "w"))
