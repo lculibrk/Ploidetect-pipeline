@@ -173,6 +173,7 @@ rule all:
         ],
 
 
+# Build ploidetect install string
 ploidetect_install_cmd = (
     "devtools::install_github('lculibrk/Ploidetect', ref = '{}')".format(
         config["ploidetect_ver"]
@@ -181,7 +182,9 @@ ploidetect_install_cmd = (
 if "ploidetect_local_clone" in config and config["ploidetect_local_clone"]:
     install_path = config["ploidetect_local_clone"].format(**config)
     ploidetect_install_cmd = f"devtools::install_local('{install_path}', force = TRUE)"
-ploidetect_install_cmd = f'"{ploidetect_install_cmd}"'
+# Bypass untar error - https://github.com/ContinuumIO/anaconda-issues/issues/11509
+SET_TAR = "Sys.setenv(TAR = \'/bin/tar\'); "
+ploidetect_install_cmd = f'"{SET_TAR + ploidetect_install_cmd}"'
 
 
 rule ploidetect_install:
@@ -204,7 +207,7 @@ rule ploidetect_install:
     shell:
         "date >> {log}; echo {params} >> {log}; "
         "export LC_ALL=en_US.UTF-8; "
-        " Rscript -e {params.install_cmd} > {log}"
+        " Rscript -e {params.install_cmd} 2>> {log}"
         " && echo {params} > {output} && date >> {output}"
 
 
@@ -521,7 +524,7 @@ rule getgc:
 
 
 rule mergedbed:
-    """Merge all the data into a single file"""
+    """Merge all the data into a single file.  Remove chr prefix from chromsomes."""
     input:
         gc=rules.getgc.output,
         tumour="{output_dir}/scratch/{case}/{somatic}_{normal}/tumour.bed",
@@ -543,7 +546,6 @@ rule mergedbed:
         "| sed 's/chr//g' > {output}"
         " 2> {log}"
         " && ls -l {output} >> {log}"
-        ## Cuts out any "chr" if using hg38
 
 
 rule preseg:
