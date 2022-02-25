@@ -7,5 +7,6 @@ dependencies:
  - r:r-docopt
  - r:r-data.table
  - r:r-devtools
- - r-ggrastr
- - bioconductor-genomicranges
+ - conda-forge:r-ggrastr
+ - conda-forge:r-cairo
+ - bioconda:bioconductor-genomicranges
