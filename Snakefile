@@ -11,6 +11,7 @@ from constants import WorkflowSetupError
 
 print(f"Ploidetect-pipeline {VERSION}")
 
+CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://bcgsc/mavis:v3.0.0')
 
 ## Load config values
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
@@ -75,7 +76,7 @@ with open(array_positions) as f:
     print(lens[0])
     if any(leng > 2 for leng in lens):
         raise(WorkflowSetupError("More than two columns detected in snp position data - file must contain only chromosome and position columns"))
-    
+
 
 
 
@@ -197,7 +198,7 @@ rule download_genome:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     shell:
         "gunzip -c {input} > {output[0]}; samtools faidx {output[0]}"
 
@@ -213,7 +214,7 @@ rule germline_cov:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     params:
         scripts_dir=scripts_dir,
         threshold=config["window_threshold"],
@@ -227,7 +228,7 @@ rule germline_cov:
         " | python3 {params.scripts_dir}/make_windows.py - {params.threshold} 2>> {log}"
         " | bedtools sort -i stdin > {output}  2>> {log}"
 
-        
+
 rule merge_germline:
     """Merge multi-chromosome output from germline_cov into single file"""
     input:
@@ -243,7 +244,7 @@ rule merge_germline:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     log:
         "{output_dir}/logs/merge_germline.{case}.{normal}.log",
     shell:
@@ -264,7 +265,7 @@ rule makewindowfile:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     log:
         "{output_dir}/logs/makewindowfile.{case}.{normal}.log",
     shell:
@@ -285,7 +286,7 @@ rule splitwindowfile:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     log:
         "{output_dir}/logs/splitwindowfile.{case}.{normal}.{chr}.log",
     shell:
@@ -293,7 +294,7 @@ rule splitwindowfile:
         " 2> {log}"
         " && ls -l {output} >> {log}"
 
-        
+
 rule genomecovsomatic:
     input:
         lambda w: config["bams"][w.case]["somatic"][w.somatic],
@@ -303,11 +304,11 @@ rule genomecovsomatic:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU
-    params: 
+    params:
         qual = config[config["sequence_type"]]["qual"],
         maxd = config[config["sequence_type"]]["maxd"]
     shell:
@@ -316,7 +317,7 @@ rule genomecovsomatic:
         " | sort -k1,1 -k2,2n "
         " | bedtools map -b stdin -a {input.window} -c 4 -o mean > {output}"
 
-        
+
 rule genomecovgermline:
     input:
         lambda w: config["bams"][w.case]["normal"][w.normal],
@@ -326,11 +327,11 @@ rule genomecovgermline:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
-    params: 
+    params:
         qual = config[config["sequence_type"]]["qual"],
         maxd = config[config["sequence_type"]]["maxd"]
     log:
@@ -341,7 +342,7 @@ rule genomecovgermline:
         " | sort -k1,1 -k2,2n"
         " | bedtools map -b stdin -a {input.window} -c 4 -o mean > {output}"
 
-        
+
 rule merge_split_tumour:
     input:
         expand(
@@ -353,7 +354,7 @@ rule merge_split_tumour:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -376,7 +377,7 @@ rule merge_split_normal:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -406,7 +407,7 @@ rule compute_loh:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     log:
         "{output_dir}/logs/compute_loh.{case}.{somatic}_{normal}.log",
     shell:
@@ -429,7 +430,7 @@ rule process_loh:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     params:
         scripts_dir=scripts_dir,
     log:
@@ -457,7 +458,7 @@ rule getgc:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     log:
         "{output_dir}/logs/getgc.{case}.{somatic}_{normal}.log",
     shell:
@@ -481,7 +482,7 @@ rule mergedbed:
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     log:
         "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
     shell:
@@ -505,7 +506,7 @@ rule preseg:
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     params:
         scripts_dir=scripts_dir,
     log:
@@ -513,7 +514,7 @@ rule preseg:
     shell:
         "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -c {input.cytos} -o {output}"
 
-        
+
 rule ploidetect:
     """Runs Ploidetect"""
     input:
@@ -535,7 +536,7 @@ rule ploidetect:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     params:
         scripts_dir=scripts_dir,
         cyto_arg = cyto_arg,
@@ -562,7 +563,7 @@ rule ploidetect_copynumber:
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        CONTAINER
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
