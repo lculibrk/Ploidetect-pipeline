@@ -15,6 +15,7 @@ Options:
 -p	--plots	plots	output plots file
 -o	--output	output	output file
 -c	--cyto	cytos	cytoband file
+-e	--meta	meta	metadata
 		--size	maximum iterations to increase resolution [default: Inf]
 
 ' -> doc
@@ -59,12 +60,16 @@ result = ploidetect_cna_sc(all_data = in_rds$all_data, segmented_data = in_rds$s
 cna_plots = result$cna_plots
 # Get CNV objects from result object
 CN_calls = result$cna_data
+# Get metadata object
+meta = result$calling_metadata
 # Open pdf device
 pdf(args$plots)
 # print plots to send them to the pdf device
 cna_plots
 # Close pdf device
 dev.off()
+# Write metadata file
+saveRDS(x = meta, file = args$meta)
 # Write CNV per-bin calls to file
 write.table(file = args$output, x = CN_calls, col.names = T, row.names=F, sep = "\t")
 # Write segmented CNV calls to file

@@ -559,6 +559,7 @@ rule ploidetect_copynumber:
         cna="{output_dir}/{case}/{somatic}_{normal}/cna.txt",
         cna_plots="{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
         cna_cond="{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
+        metadat="{output_dir}/{case}/{somatic}_{normal}/metadat.rds",
     conda:
         "conda_configs/r.yaml"
     container:
@@ -575,4 +576,5 @@ rule ploidetect_copynumber:
         "Rscript {params.scripts_dir}/ploidetect_copynumber.R"
         " -i {input.rds} -m {input.models}"
         " -p {output.cna_plots} -o {output.cna} {params.cyto_arg}"
+        " -e {output.metadat}"
         " &> {log}"
