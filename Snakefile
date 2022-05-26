@@ -91,6 +91,8 @@ if cyto_path == "auto":
     else:
         raise WorkflowSetupError("Cytoband file is set to auto-detect, but could not download cytoband file. Make sure you didn't misspell the genome file, leave the cyto_path blank in the config, or explicitly set a path for it")
 
+else:
+    cyto_arg = f"-c {cyto_path}" if cyto_path else ""
 
 ## Parse sample information
 bams_dict = config["bams"]
