@@ -122,6 +122,9 @@ for sample in sample_ids:
 
 include: "single_sample.smk"
 
+wildcard_constraints:
+    somatic = "[^_]*"
+
 print(f"Final outputs: {output_list}")
 
 rule all:
@@ -496,22 +499,22 @@ rule mergedbed:
 rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
-        "{output_dir}/scratch/{case}/{libs}/merged.bed",
+        "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
         rules.ploidetect_install.output if workflow.use_conda and not workflow.use_singularity else __file__,
         cytos=cyto_path,
     output:
-        "{output_dir}/{case}/{libs}/segmented.RDS",
+        "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
     resources:
         cpus=24,
         mem_mb=24 * MEM_PER_CPU,
     conda:
         "conda_configs/r.yaml"
     container:
-        "docker://lculibrk/ploidetect"
+        "docker://lculibrk/ploidetect:v1.4.0"
     params:
         scripts_dir=scripts_dir,
     log:
-        "{output_dir}/logs/preseg.{case}.{libs}.log",
+        "{output_dir}/logs/preseg.{case}.{somatic}_{normal}.log",
     shell:
         "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -c {input.cytos} -o {output}"
 
@@ -519,7 +522,7 @@ rule preseg:
 rule ploidetect:
     """Runs Ploidetect"""
     input:
-        preseg=rules.preseg.output,
+        preseg="{output_dir}/{case}/{libs}/segmented.RDS",
         install=(
             rules.ploidetect_install.output
             if not workflow.use_singularity

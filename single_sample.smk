@@ -9,16 +9,30 @@ rule mkgenome_ss:
     shell:
         "cut -f 1,2 {input} > {output}"
 
+rule filter_windows:
+    """Filters out non-standard chromosomes from windows file"""
+    input:
+        rules.mkgenome_ss.output,
+    output:
+        temp("{output_dir}/scratch/genome.filt")
+    run:
+        ps = "{{print $0}}"
+        for chrom in chromosomes:
+            print("awk '$1 == \"" + chrom + "\" " + ps + "' " + input[0] + " >> " + output[0])
+            shell("awk '$1 == \"" + chrom + "\" " + ps + "' " + input[0] + " >> " + output[0])
+
 rule windows_ss:
     """Create bins for single-sample data"""
     input:
-        genome = "{output_dir}/scratch/genome.bins"
+        genome = "{output_dir}/scratch/genome.filt"
     output:
         temp("{output_dir}/scratch/{case}/{somatic}/windows.bed"),
     container:
         "docker://lculibrk/ploidetect"
     shell:
-        "bedtools makewindows -g {input.genome} -w 100000 > {output}"
+        "bedtools makewindows -g {input.genome} -w 5000 > {output}"
+
+
 
 rule splitwindowfile_ss:
     """Split bins by chromosome for paralellization"""
@@ -93,7 +107,7 @@ rule loh_ss:
         window=rules.windows_ss.output,
         genome = genome_path,
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}/loh.bed"),
+        "{output_dir}/scratch/{case}/{somatic}/loh.bed",
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
@@ -109,7 +123,6 @@ rule loh_ss:
     shell:
         "samtools mpileup {input.sombam} -l {params.array_positions} -f {input.genome} -B"
         " | awk -f {params.scripts_dir}/parse_pileup.awk"
-        " | bedtools sort -i stdin"
         " | awk -v FS='\t' -v OFS='\t' '($4 != 0 && $6 != 0){{ print $1, $2, $2+1, $4, $6 }}'"
         " | awk -v FS='\t' -v OFS='\t' '{{print $1, $2, $3, ($4 / ($4 + $5)) }}'"
         " | bedtools sort -i stdin"
@@ -124,7 +137,7 @@ rule getgc_ss:
         window=rules.windows_ss.output,
         genome = genome_path,
     output:
-        temp("{output_dir}/scratch/{case}/{somatic}/gc.bed"),
+        "{output_dir}/scratch/{case}/{somatic}/gc.bed",
     params:
     resources:
         cpus=1,
@@ -143,19 +156,41 @@ rule getgc_ss:
 rule merge_single:
     """Merge single-sample data into a single file"""
     input:
-        gc="{output_dir}/scratch/{case}/{tumour}/gc.bed",
-        tumour="{output_dir}/scratch/{case}/{tumour}/tumour.bed",
-        loh="{output_dir}/scratch/{case}/{tumour}/loh.bed",
+        gc="{output_dir}/scratch/{case}/{somatic}/gc.bed",
+        tumour="{output_dir}/scratch/{case}/{somatic}/tumour.bed",
+        loh="{output_dir}/scratch/{case}/{somatic}/loh.bed",
     output:
-        temp("{output_dir}/scratch/{case}/{tumour}/merged.bed"),
+        temp("{output_dir}/scratch/{case}/{somatic}/merged.bed"),
     conda:
         "conda_configs/sequence_processing.yaml"
     container:
         "docker://lculibrk/ploidetect"
     log:
-        "{output_dir}/logs/mergedbed.{case}.{tumour}.log",
+        "{output_dir}/logs/mergedbed.{case}.{somatic}.log",
     shell:
         "paste {input.tumour} <(cut -f4 {input.loh}) <(cut -f4 {input.gc})"
         "| sed 's/chr//g' > {output}" ## Cuts out any "chr" if using hg38
         " 2> {log}"
         " && ls -l {output} >> {log}"
+
+rule preseg_ss:
+    """Presegment and prepare data for input into Ploidetect"""
+    input:
+        "{output_dir}/scratch/{case}/{somatic}/merged.bed",
+        rules.ploidetect_install.output if workflow.use_conda and not workflow.use_singularity else __file__,
+        cytos=cyto_path,
+    output:
+        "{output_dir}/{case}/{somatic}/segmented.RDS",
+    resources:
+        cpus=24,
+        mem_mb=24 * MEM_PER_CPU,
+    conda:
+        "conda_configs/r.yaml"
+    container:
+        "docker://lculibrk/ploidetect:v1.4.0"
+    params:
+        scripts_dir=scripts_dir,
+    log:
+        "{output_dir}/logs/preseg.{case}.{somatic}.log",
+    shell:
+        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -c {input.cytos} -o {output} -s TRUE"

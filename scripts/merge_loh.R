@@ -30,6 +30,9 @@ library(docopt)
 library(dplyr)
 library(GenomicRanges)
 #
+# Scipen to prevent scientific notation
+options(scipen=999)
+#
 # Read arguments
 args <- docopt(doc)
 #
