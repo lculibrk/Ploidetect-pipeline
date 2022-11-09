@@ -21,7 +21,10 @@ library(Ploidetect)
 #
 # Parse arguments
 args = docopt(doc)
-#
+
+print(paste0(c(args$input,
+              " sent to Ploidetect::ploidetect_presegment version: ",
+              packageVersion("Ploidetect"))))
 # Read .bed table
 all_data = read.table(args$input, header = F, sep = "\t", skip = 1, stringsAsFactors = F)
 #

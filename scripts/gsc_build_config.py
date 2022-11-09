@@ -11,56 +11,16 @@ from os.path import abspath, dirname, exists, join, realpath
 from ProjectInfo import BioappsApi
 from ruamel_yaml import YAML
 
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 
 logger = logging.getLogger(__name__)
 API = BioappsApi()
 CONFIG_BASENAME = "Ploidetect-pipeline.yaml"
-GENOME_DATA = """\
-window_threshold: 100000
 
-# Reference data.  Selected by 'genome_name' value.
-genome:
-    hg19:
-        /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
-    hg38:
-        /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
-annotation:
-    hg19:
-        /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
-    hg38:
-        /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
-array_positions:
-    hg19:
-        "resources/snp_arrays/hg19/SNP_array_positions.txt"
-    hg38:
-        "resources/snp_arrays/hg38/SNP_array_positions.txt"
-chromosomes:
- - 1
- - 2
- - 3
- - 4
- - 5
- - 6
- - 7
- - 8
- - 9
- - 10
- - 11
- - 12
- - 13
- - 14
- - 15
- - 16
- - 17
- - 18
- - 19
- - 20
- - 21
- - 22
- - X
- - Y
-"""
+REFS = ("hg19", "hg38")
+DEFAULTS_FOLDER = abspath(join(dirname(abspath(__file__)), "..", "resources", "config"))
+GENOME_REF_YAMLS = [join(DEFAULTS_FOLDER, f"genome_ref.{ref}.yaml") for ref in REFS]
+DEFAULT_RUN_YAML = join(DEFAULTS_FOLDER, "default_run_params.yaml")
 
 
 def get_biopsy_dna_tumour_normal(patient_id, biopsy="biop1"):
@@ -169,9 +129,12 @@ def get_bam(library, genome_reference=None):
 
     Returns (library, genome_reference)
     """
-    bams_all = API.get_bam_info_from_library(library)
+    bams_all = API.get_bam_info_from_library(library, reference=genome_reference)
     if genome_reference:
-        bams_all = [bd for bd in bams_all if bd["genome_reference"] == genome_reference]
+        bams_all = [
+            bd for bd in bams_all if bd["genome_reference"].startswith(genome_reference)
+        ]
+
     bams = []
     for bam in bams_all:
         bam_fns = glob.glob(join(bam["data_path"], "*.bam"))
@@ -179,17 +142,27 @@ def get_bam(library, genome_reference=None):
             logger.error(f"No bam found in path: {bam['data_path']}")
         else:
             bams.append(bam)
+
+    assert bams, f"Bam finding error for: '{library}' (ref: {genome_reference})"
+
+    bams.sort(key=lambda x: bool(x["tumour_char"]), reverse=True)
     for bam in bams[1:]:
         warn = f"Ignoring tumour bam {bam['data_path']}"
         logger.warning(warn)
 
     bam_fns = glob.glob(join(bams[0]["data_path"], "*.bam"))
-    assert len(bam_fns) == 1, f"Bam finding error for: '{library}'"
+    assert (
+        len(bam_fns) == 1
+    ), f"Bam finding error for: '{library}' (ref: {genome_reference})"
     return (bam_fns[0], bams[0]["genome_reference"])
 
 
 def genome_reference2genome_name(gsc_genome_reference):
-    return "hg19" if gsc_genome_reference == "hg19a" else gsc_genome_reference
+    if gsc_genome_reference.lower() in ("hg19", "hg19a", "grch37"):
+        return "hg19"
+    if gsc_genome_reference.lower() in ("hg38", "hg38_no_alt", "grch38"):
+        return "hg38"
+    return gsc_genome_reference
 
 
 def build_config(
@@ -197,10 +170,13 @@ def build_config(
     biopsy=None,
     tumour_lib=None,
     normal_lib=None,
+    genome_reference=None,
     pipeline_ver="undefined",
     ploidetect_ver="undefined",
     install_ploidetect=False,
     project=None,
+    ref_yamls=GENOME_REF_YAMLS,
+    run_params_yaml=DEFAULT_RUN_YAML,
     **kwargs,
 ):
     """Build a GSC config for running Ploidetect.
@@ -225,6 +201,7 @@ def build_config(
         # Leave ploidetect_local_clone blank or 'None' to download from github
         ploidetect_local_clone: /gsc/pipelines/Ploidetect/undefined
         install_ploidetect: 0
+        window_threshold: 100000
         # Reference data.  Selected by 'genome_name' value.
         genome:
           hg19: /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
@@ -256,9 +233,11 @@ def build_config(
         - 21
         - 22
         - X
+        - Y
     """
     TAB = "  "
     yaml_lines = []
+    yaml = YAML()
 
     if not biopsy and not (tumour_lib and normal_lib):
         raise ValueError(
@@ -273,8 +252,8 @@ def build_config(
     # Find bams
     yaml_lines.append("bams:")
     yaml_lines.append(f"{TAB}{patient_id}:")
-    tumour_bam_fn, genome_name = get_bam(tumour_lib)
-    normal_bam_fn, normal_genome_name = get_bam(normal_lib)
+    tumour_bam_fn, genome_name = get_bam(tumour_lib, genome_reference)
+    normal_bam_fn, normal_genome_name = get_bam(normal_lib, genome_reference)
 
     yaml_lines.append(f"{TAB}{TAB}somatic:")
     yaml_lines.append(f"{TAB}{TAB}{TAB}{tumour_lib}: {tumour_bam_fn}")
@@ -312,11 +291,26 @@ def build_config(
     )
     yaml_lines.append(f"install_ploidetect: {1 if bool(install_ploidetect) else 0}")
 
-    # Genomic Reference data
-    yaml_lines.append(GENOME_DATA)
-
-    yaml = YAML()
     config = yaml.load("\n".join(yaml_lines))
+
+    run_params = yaml.load(open(run_params_yaml))
+    for k, v in run_params.items():
+        if k not in config.keys():
+            config[k] = v
+
+    # Genomic Reference data
+    # each reference should have the same keys:
+    #   ['annotation', 'array_positions', 'genome', 'ref_chromosomes']
+    # Values for reference should be under reference names to avoid conflicts. eg:
+    #   ref['annotation']['hg38'] = <filepath_to_gtf>
+    for ref_yaml_fn in ref_yamls:
+        logger.info(f"Loading genome reference data from f{ref_yaml_fn}")
+        ref = yaml.load(open(ref_yaml_fn))
+        for k, v in ref.items():
+            if k not in config:
+                config[k] = v
+            else:
+                config[k].update(v)
 
     return config
 
@@ -341,6 +335,9 @@ def parse_args():
     parser.add_argument("-b", "--biopsy", help="Find libraries from biopsy")
     parser.add_argument("-t", "--tumour-lib", help="Specify DNA tumour library")
     parser.add_argument("-n", "--normal-lib", help="Specify DNA tumour library")
+    parser.add_argument(
+        "-r", "--genome-reference", help="Specify hg19/hg38 instead of using tc flag"
+    )
     parser.add_argument(
         "-o",
         "--output-file",

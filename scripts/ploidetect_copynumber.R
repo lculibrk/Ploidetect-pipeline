@@ -19,7 +19,6 @@ Options:
 
 
 ' -> doc
-#
 # Load packages
 library(docopt)
 library(devtools)
@@ -27,7 +26,7 @@ library(data.table)
 #library(Ploidetect)
 devtools::load_all("/projects/lculibrk_prj/CNV/Ploidetect2/package/Ploidetect")
 library(ggrastr)
-#
+
 # Force data.table to use only one thread (defaults to a large number)
 setDTthreads(1)
 #
