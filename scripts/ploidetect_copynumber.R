@@ -7,14 +7,16 @@
 ' ploidetect_copynumber.R
 
 Usage:
-ploidetect_copynumber.R -i input -m models.txt -p plots.pdf -o output.txt [--size=SIZE]
+ploidetect_copynumber.R -i input -m models.txt -p plots.pdf -o output.txt -d metadat.rds [--size=SIZE]
 
 Options:
 -i	--input	input	input .RDS data file
 -m	--models	models	input .txt file of desired models for copy number calling
 -p	--plots	plots	output plots file
 -o	--output	output	output file
+-d	--metadat	metadat	metadata file
 		--size	maximum iterations to increase resolution [default: Inf]
+
 
 ' -> doc
 #
@@ -22,7 +24,8 @@ Options:
 library(docopt)
 library(devtools)
 library(data.table)
-library(Ploidetect)
+#library(Ploidetect)
+devtools::load_all("/projects/lculibrk_prj/CNV/Ploidetect2/package/Ploidetect")
 library(ggrastr)
 #
 # Force data.table to use only one thread (defaults to a large number)
@@ -66,3 +69,5 @@ dev.off()
 write.table(file = args$output, x = CN_calls, col.names = T, row.names=F, sep = "\t")
 # Write segmented CNV calls to file
 write.table(file = paste0(gsub(".txt", "", args$output), "_condensed.txt"), x = result$segged_cna_data, col.names = T, row.names = F, quote = F, sep = "\t")
+# save metadata
+saveRDS(result$calling_metadata,args$metadat)
