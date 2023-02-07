@@ -1,0 +1,8 @@
+
+bams:
+    COLO829-TestA:
+        somatic:
+            A36971: /projects/analysis/analysis33/A36971/merge70788_mmp2-2.15/150bp/hg38_no_alt/A36971_6_lanes_dupsFlagged.bam
+        normal:
+            A36973: /projects/analysis/analysis33/A36973/merge72234_mmp2-2.15/125bp/hg38_no_alt/A36973_6_lanes_dupsFlagged.bam
+

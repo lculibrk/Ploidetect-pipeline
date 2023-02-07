@@ -1,9 +1,11 @@
 channels:
  - r
+ - conda-forge
+ - bioconda
 dependencies:
- - r-essentials
- - r-docopt
- - r-data.table
- - r-devtools
+ - r:r-essentials
+ - r:r-docopt
+ - r:r-data.table
+ - r:r-devtools
  - r-ggrastr
  - bioconductor-genomicranges
