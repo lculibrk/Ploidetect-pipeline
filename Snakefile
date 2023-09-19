@@ -11,7 +11,7 @@ from constants import WorkflowSetupError
 
 print(f"Ploidetect-pipeline {VERSION}")
 
-CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://lculibrk/Ploidetect:v1.4.2')
+CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://lculibrk/Ploidetect:latest')
 
 ## Load config values
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
