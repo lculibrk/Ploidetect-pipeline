@@ -129,9 +129,17 @@ We've recently added support for oxford nanopore data. Specify here whether your
 ```
 sequence_type: "short"
 ```
+
+OR
+
+```
+sequence_type: "ont"
+```
 #### 1.1.5: Supporting custom genomes
 
-Currently, we support hg19 and hg38 without requiring any user-specified files. Genomes hosted on UCSC aside from hg19 and hg38 are compatible, requiring only a few files from the user. If you are using hg19 or hg38, but would like to use your own versions of these files, you may also specify them here. By default the workflow will use packaged files (SNP positions) or UCSC data (fasta and cytoband annotations). 
+Currently, we support hg19 and hg38 *without requiring any user-specified files*. If you are using hg19 or hg38, you can skip this subsection and move to section 2 without worry.
+
+Genomes hosted on UCSC aside from hg19 and hg38 are compatible, requiring only a few files from the user. If you are using hg19 or hg38, but would like to use your own versions of these files, you may also specify them here. By default the workflow will use packaged files (SNP positions) or UCSC data (fasta and cytoband annotations). 
 
 If you are using a non-hg19/38 genome, you must include these lines in the config:
   
@@ -203,7 +211,7 @@ source venv/bin/activate
 
 ### 2.2: Package management
 
-Some form of package management is recommended to satisfy the dependencies of the workflow. Currently, Conda and singularity are supported. You only need one to run this workflow. If you followed the above instructions you will already have a conda environment active.
+Some form of package management is recommended to satisfy the dependencies of the workflow. Currently, Conda and singularity are supported. You only need one to run this workflow. If you followed the above instructions you will already have a conda environment active. We recommend Singularity, as that is the simplest way to satisfy the dependencies for Ploidetect and requires minimal input from you.
 
 #### 2.2.1 Optional - Install mamba
 
@@ -306,6 +314,7 @@ snakemake \
  --restart-times 2 \
  -j THREADS \
  --use-conda \
+ --cluster 'sbatch -t 2-00:00:00 --mem={resources.mem_mb} -c {resources.cpus} -o logs_slurm/{rule}_{wildcards} -e logs_slurm/{rule}_{wildcards} -p QUEUE_NAME'
 
 ```
 ### Singularity (2.2.3):
