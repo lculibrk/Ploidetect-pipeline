@@ -2,7 +2,7 @@
 
   
 
-Data pre-procesing pipeline for https://github.com/lculibrk/Ploidetect
+Pipeline for https://github.com/lculibrk/Ploidetect
 
   
 ## 0. Clone
