@@ -108,16 +108,16 @@ Leave this on "auto" if using hg19 or hg38. If you'd like to use custom cytoband
 
 #### 1.1.3: Ploidetect version
 
-This only applies if you're not running the pipeline with `--use-singularity` (to be explained).
+This only applies if you're not running the pipeline with `--use-singularity` (which is the recommended way, to be explained below).
 
-Specify the version name of Ploidetect to use from the [github repo](https://github.com/lculibrk/Ploidetect) in the `ploidetect_ver` entry. Here we chose v1.3.0 (latest version). If you have a local clone on your filesystem, you can specify that using `ploidetect_local_clone`. If you don't have a clone, leave it blank (i.e. the line should simply read `ploidetect_local_clone: `). You can also specify a commit id, such as the one in the paper. 
+Specify the version name of Ploidetect to use from the [github repo](https://github.com/lculibrk/Ploidetect) in the `ploidetect_ver` entry. Here we chose v1.4.2 (latest version). If you have a local clone on your filesystem, you can specify that using `ploidetect_local_clone`. If you don't have a clone, leave it blank (i.e. the line should simply read `ploidetect_local_clone: `). You can also specify a commit id, such as the one in the paper. 
 
   
 
 ```
 
 # ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
-ploidetect_ver: v1.3.0
+ploidetect_ver: v1.4.2
 
 # Leave ploidetect_local_clone blank or 'None' to download from github
 ploidetect_local_clone: 
