@@ -10,10 +10,13 @@ sys.path.append(scripts_dir)
 from constants import VERSION as pipeline_ver
 from gsc_build_config import (
     CONFIG_BASENAME,
+    get_bam,
     get_biopsy_dna_tumour_normal,
     get_gsc_output_folder,
+    genome_reference2genome_name,
 )
 from gsc_build_config import main as build_config
+
 
 USAGE = """\
 Run Ploidetect-pipeline with GSC sample setup helpers.
@@ -24,6 +27,7 @@ Use --config options such as:
     biopsy: eg 'biop2' (optional) - find libraries tumour_lib & normal_lib by bioapps_api.
     tumour_lib: Required if no biopsy given for bioapps lookup.
     normal_lib:  Required if no biopsy given for bioapps lookup.
+    genome_reference: (optional) - force hg19 or hg38 bam (ignore 'tumour_char' status)
     gsc_config_filename: (optional) specify output config filename
     project: (optional) specify project
 
@@ -38,31 +42,48 @@ if "id" in config.keys() and (
 ):
     print("Running GSC build")
 else:
-    print("No GSC specific config to create.")
+    print("Either a biopsy or tumour_lib/normal_lib pair required.")
     print(USAGE)
     sys.exit()
 
-if "biopsy" in config.keys():
+if "tumour_lib" not in config.keys() or "normal_lib" not in config.keys():
+    logger.warning(
+        f'Finding tumour_lib/normal_lib from bioapps {config["id"]}: {config["biopsy"]}'
+    )
     config["tumour_lib"], config["normal_lib"] = get_biopsy_dna_tumour_normal(
         patient_id=config["id"], biopsy=config["biopsy"]
     )
+
 case = config["id"]
 somatic = config["tumour_lib"]
 normal = config["normal_lib"]
 
-# Current output_dir value, before loading any defaults.
-output_dir = config["output_dir"] if "output_dir" in config.keys() else ""
+if "genome_reference" in config.keys():
+    genome_reference = config["genome_reference"]
+else:
+    logger.warning(f"Warning no reference - finding from {somatic} bam")
+    _, genome_reference = get_bam(somatic)
+    genome_reference = genome_reference2genome_name(genome_reference)
+    logger.warning(f"Found genome_reference: {genome_reference}")
 
 
 # Load default values for references / annotations, etc.
-configfile: os.path.join(workflow.basedir, "CONFIG.txt")
+configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")
+configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.hg19.yaml")
+configfile: os.path.join(workflow.basedir, "resources/config/genome_ref.hg38.yaml")
 
+
+# Use local clone for now, for rapid development.
+# TODO: use singularity deployment reliablity in future.
+if "ploidetect_ver" not in config:
+    config["ploidetect_ver"] = config["default_ploidetect_ver"]
+config["ploidetect_local_clone"] = config["default_ploidetect_local_clone"]
 
 # If no output_dir given, use properties of GSC bioapps_api for standard project output location.
-output_dir = (
-    output_dir
-    if output_dir
-    else get_gsc_output_folder(
+if "output_dir" in config.keys():
+    output_dir = config["output_dir"]
+else:
+    output_dir = get_gsc_output_folder(
         patient_id=config["id"],
         tumour_lib=config["tumour_lib"],
         normal_lib=config["normal_lib"],
@@ -70,7 +91,7 @@ output_dir = (
         ploidetect_ver=config["ploidetect_ver"],
         project=config["project"] if "project" in config.keys() else None,
     )
-)
+    output_dir = os.path.join(output_dir, genome_reference)
 
 # Find an output filename for the config we are generating
 if "gsc_config_filename" in config.keys():
@@ -80,11 +101,12 @@ else:
 
 # Script building the config if needed
 if not os.path.exists(gsc_config_filename):
-    print(f"Creating {gsc_config_filename}")
+    logger.warning(f"Creating {gsc_config_filename}")
     args = SimpleNamespace(**config)
     args.pipeline_ver = pipeline_ver
     args.output_file = gsc_config_filename
     args.patient_id = args.id
+    args.genome_reference = genome_reference
     build_config(args=args)
 
 # Run the standard Snakemake pipeline with the appropriate config
@@ -100,10 +122,10 @@ configfile: gsc_config_filename
 #   backups of large temporary files.
 scratch = f"{output_dir}/scratch"
 if config["temp_dir"] and not os.path.exists(scratch):
-    print(f'Creating scratch space:  {config["temp_dir"]}')
+    logger.warning(f'Creating scratch space:  {config["temp_dir"]}')
     os.makedirs(config["temp_dir"])
 if config["temp_dir"] and not os.path.islink(scratch) and not os.path.exists(scratch):
-    print(f"Creating symlink: {scratch}")
+    logger.warning(f"Creating symlink: {scratch}")
     os.symlink(config["temp_dir"], scratch)
 
 

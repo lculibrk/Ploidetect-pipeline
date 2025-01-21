@@ -53,6 +53,12 @@ chromosome_defaults:
 ## resource params
 mem_per_cpu: 7900
 
+# Blank if want to use only automated purity/ploidy
+models:
+    COLO829-TestA:
+        A36971:
+            tp: 1
+            ploidy: 3
 
 ## genome
 genome:
@@ -72,12 +78,13 @@ annotation:
         /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
 
 ## Sequence type
-ont:
-    maxd: 500
-    qual: 10
-short:
-    maxd: 1000
-    qual: 50
+sequence_type_defaults:
+    ont:
+        maxd: 500
+        qual: 10
+    short:
+        maxd: 1000
+        qual: 50
 
 
 # make_windows.py threshold
