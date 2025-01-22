@@ -12,7 +12,7 @@ from constants import WorkflowSetupError
 HTTP = HTTPRemoteProvider()
 MEM_PER_CPU = 7900
 
-CONTAINER = "docker://lculibrk/ploidetect:latest"
+CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://lculibrk/Ploidetect:latest')
 
 ## Load config values
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
