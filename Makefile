@@ -2,18 +2,33 @@
 .DEFAULT_GOAL := help
 
 
-VENV_NAME=venv
+VENV_PIP=venv
+VENV_CONDA=venv_conda
+# Many python versions should work.
+PYTHON_VER=3.11
 
-snakemake_env: ## conda install of snakemake into a new '$(VENV_NAME)'.  After 'source venv/bin/activate'
+
+conda_venv:  ## download and install miniconda & mamba. To use 'source venv_conda/bin/activate'
 	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-	bash miniconda.sh -b -u -p $(VENV_NAME)
-	$(VENV_NAME)/bin/conda install --yes -c conda-forge mamba python=3.8 pip
+	bash miniconda.sh -b -u -p $(VENV_CONDA)
+	$(VENV_CONDA)/bin/conda install --yes python=$(PYTHON_VER) pip
+	$(VENV_CONDA)/bin/pip install -U pip
+
+conda_snakemake:  ## conda install of snakemake into a new '$(VENV_CONDA)'.  After 'source venv/bin/activate'
 	# Only snakemake is really needed but other modules are useful for dev.
-	# $(VENV_NAME)/bin/mamba install --yes -c conda-forge -c bioconda snakemake
-	$(VENV_NAME)/bin/mamba install --yes -c conda-forge -c bioconda snakemake \
-		snakefmt jupyter isort black flake8 mypy pylint pydocstyle
-	echo "installed conda venv with snakemake in $(VENV_NAME) activate with:"
-	echo "  source $(VENV_NAME)/bin/activate"
+	$(VENV_CONDA)/bin/conda install --yes -c conda-forge -c bioconda snakemake \
+		snakefmt isort black flake8 mypy pylint pydocstyle
+	echo "installed conda venv with snakemake in $(VENV_CONDA) activate with:"
+	echo "  source $(VENV_CONDA)/bin/activate"
+
+pip_venv:  ## pip install is much faster and smaller, but missing some advanced snakemake features
+	# python -m venv $(VENV_PIP)
+	# if the local python version is not installed/working use python from conda_venv
+	$(VENV_CONDA)/bin/python -m venv $(VENV_PIP)
+	$(VENV_PIP)/bin/pip install -U pip
+
+pip_snakemake:  ## python install
+	$(VENV_PIP)/bin/pip install -U snakemake snakefmt isort black flake8 mypy pylint pydocstyle
 
 format-code:  ## apply standard formatter like snakefmt and black to scripts.
 # python script formatting
