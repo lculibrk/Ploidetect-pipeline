@@ -12,7 +12,7 @@ from constants import WorkflowSetupError
 HTTP = HTTPRemoteProvider()
 MEM_PER_CPU = 7900
 
-CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://lculibrk/Ploidetect:latest')
+CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://lculibrk/ploidetect:latest')
 
 ## Load config values
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
@@ -644,13 +644,13 @@ rule ploidetect_copynumber:
     input:
         cytos=cyto_path,
         models="{output_dir}/{case}/{somatic}_{normal}/models.txt",
-        rds="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
+        segs="{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
         plots="{output_dir}/{case}/{somatic}_{normal}/plots.pdf",
     output:
         cna="{output_dir}/{case}/{somatic}_{normal}/cna.txt",
         cna_plots="{output_dir}/{case}/{somatic}_{normal}/cna_plots.pdf",
         cna_cond="{output_dir}/{case}/{somatic}_{normal}/cna_condensed.txt",
-	metadat="{output_dir}/{case}/{somatic}_{normal}/metadat.rds"
+        metadat="{output_dir}/{case}/{somatic}_{normal}/metadat.rds"
     conda:
         "conda_configs/r.yaml"
     container:
@@ -667,5 +667,5 @@ rule ploidetect_copynumber:
         "Rscript {params.scripts_dir}/ploidetect_copynumber.R"
         " -i {input.segs} -m {input.models}"
         " -p {output.cna_plots} -o {output.cna}"
-	" -d {output.metadat} -c {input.cytos}"
+        " -d {output.metadat} -c {input.cytos}"
         " &>> {log}"
