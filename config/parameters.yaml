@@ -1,13 +1,13 @@
 ### Genome version considerations
 
 # genome_name should match bams
-genome_name: "hg19"
+genome_name: "hg38"
 
 # Are we using custom cytobands? put "none" to disable cytoband filtering (not recommended)
 cyto_path: auto
 
 # ploidetect_ver should be a branch or tag.  Overriden by ploidetect_local_clone.
-ploidetect_ver: v1.3.0
+ploidetect_ver: v1.4.2
 
 # Leave ploidetect_local_clone blank or 'None' to download from github
 ploidetect_local_clone: 
