@@ -3,57 +3,59 @@ import os
 import sys
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 import requests
-HTTP = HTTPRemoteProvider()
 
 sys.path.insert(0, workflow.basedir)
 from constants import VERSION
 from constants import WorkflowSetupError
 
-HTTP = HTTPRemoteProvider()
+# Removed because it is nolonger supported in snakemake 8
+# HTTP = HTTPRemoteProvider()
 MEM_PER_CPU = 7900
-
 CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://lculibrk/ploidetect:latest')
 
 ## Load config values
+print(f"Loading default config values from: {workflow.basedir}/config")
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
 configfile: os.path.join(workflow.basedir, "config/samples.yaml")
 configfile: os.path.join(workflow.basedir, "config/parameters.yaml")
 
 MEM_PER_CPU = config["mem_per_cpu"]
+hgver = config["genome_name"]
+
+###### Check installation and resources ########
+print(f"Checking installed files for: {hgver}")
 
 ##### Default checks
 ## If chromosomes not specified, try to use defaults
-if "chromosomes" not in config:
+chromosomes = []
+if "chromosomes" in config:
+    chromosomes = config["chromosomes"]
+else:
     if config["genome_name"] in config["chromosome_defaults"].keys():
         chromosomes = config["chromosome_defaults"][config["genome_name"]]
-    else:
-        chromosomes = []
-else:
-    chromosomes = config["chromosomes"]
-
 if len(chromosomes) == 0:
     raise(WorkflowSetupError("No valid chromosomes found. If you're using a non-standard genome (not hg38 or hg19), you must explicitly specify chromosome names in the config"))
 
+
+genome_fasta = ""
 if "genome" in config:
     if config["genome_name"] in config["genome"]:
         genome_path = config["genome"][config["genome_name"]]
-    else:
-        genome_path = "failed"
-    if not os.path.exists(genome_path):
-        genome_path = "failed"
-else:
-    genome_path == "failed"
+        if os.path.exists(genome_path):
+            genome_fasta = genome_path
+        else:
+            logger.error(f"Missing file {genome_path}")
 
-if genome_path == "failed":
-    hgver = config["genome_name"]
+if not genome_fasta:
     connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
     if connec.status_code == 200:
-        genome_path = f"resources/{hgver}/genome.fa"
+        genome_fasta = f"resources/{hgver}/genome.fa"
     else:
         raise(WorkflowSetupError("Genome fasta file not found in config or on UCSC. Specify a path to your genome fasta"))
 
 include: "defaults.smk"
 
+print(f"{genome_fasta=}")
 
 output_dir = config["output_dir"]
 
@@ -96,8 +98,6 @@ with open(array_positions) as f:
         raise(WorkflowSetupError("More than two columns detected in snp position data - file must contain only chromosome and position columns"))
 
 
-
-
 cyto_path = config["cyto_path"] if "cyto_path" in config else ""
 if cyto_path == "auto":
     ## Try to automatically get cytobands based on genome name
@@ -111,6 +111,8 @@ if cyto_path == "auto":
 
 else:
     cyto_arg = f"-c {cyto_path}" if cyto_path else ""
+
+print(cyto_path)
 
 ## Parse sample information
 bams_dict = config["bams"]
@@ -152,22 +154,22 @@ rule all:
 
 rule download_cytobands:
     """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
-    input:
-        HTTP.remote(
-            expand(
-                "http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz",
-                hgver=config["genome_name"],
-            )
-        ),
     output:
         expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
+    params:
+        hgver=config["genome_name"]
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
     conda:
         "conda_configs/sequence_processing.yaml"
     shell:
-        "gunzip -c {input} > {output}"
+        # TODO: does 'chr' need to be stripped from the cytobands output for hg38?
+        #       or does it just need to match the list of chromosomes given
+        # "gunzip -c {input} | sed 's/chr//g' > {output}"
+        "wget -O resources/{params.hgver}/cytobands.txt.gz "
+        "   http://hgdownload.cse.ucsc.edu/goldenpath/{params.hgver}/database/cytoBand.txt.gz;"
+        "gunzip -c resources/{params.hgver}/cytobands.txt.gz > {output}"
 
 
 def devtools_install():
@@ -204,57 +206,38 @@ rule ploidetect_install:
         " && echo {params} > {output} && date >> {output}"
 
 
-rule download_cytobands:
-    """Downloads cytoband data for plotting & (todo) hgver-specific centromere filtering"""
-    input:
-        HTTP.remote(
-            expand(
-                "http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz",
-                hgver=config["genome_name"],
-            )
-        ),
-    output:
-        expand("resources/{hgver}/cytobands.txt", hgver=config["genome_name"]),
-    resources:
-        cpus=1,
-        mem_mb=MEM_PER_CPU,
-    conda:
-        "conda_configs/sequence_processing.yaml"
-    shell:
-        "gunzip -c {input} | sed 's/chr//g' > {output}"
-
 rule download_genome:
-    input:
-        HTTP.remote(
-            expand(
-                "https://hgdownload.soe.ucsc.edu/goldenPath/{hgver}/bigZips/{hgver}.fa.gz",
-                hgver=config["genome_name"],
-            )
-        )
+    """If needed, try downloading genome fasta reference from goldenPath."""
     output:
         expand("resources/{hgver}/genome.fa", hgver = config["genome_name"]),
         expand("resources/{hgver}/genome.fa.fai", hgver = config["genome_name"]),
+    params:
+        hgver=config["genome_name"]
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
     conda:
-        "conda_configs/sequence_processing.yaml"
+        "conda_configs/sequence_processing.yaml",
     container:
         CONTAINER
     shell:
-        "gunzip -c {input} > {output[0]}; samtools faidx {output[0]}"
+        "wget -O {output[0]}.gz https://hgdownload.soe.ucsc.edu/goldenPath/{params.hgver}/bigZips/{params.hgver}.fa.gz ;"
+        "gunzip -c {output[0]}.gz > {output[0]}; samtools faidx {output[0]}"
 
+
+## Ploidetect prep
 rule germline_cov:
     """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins"""
     input:
         bam=lambda w: config["bams"][w.case]["normal"][w.normal],
+        output_dir=output_dir,
     output:
         temp("{output_dir}/scratch/{case}/{normal}/normal/{chr}.bed"),
     resources:
         cpus=1,
         mem_mb=MEM_PER_CPU,
     conda:
-        "conda_configs/sequence_processing.yaml"
+        "conda_configs/sequence_processing.yaml",
     container:
         CONTAINER
     params:
@@ -540,7 +523,6 @@ rule preseg:
     """Presegment and prepare data for input into Ploidetect"""
     input:
         "{output_dir}/scratch/{case}/{somatic}_{normal}/merged.bed",
-        rules.ploidetect_install.output if workflow.use_conda and not workflow.use_singularity else __file__,
         cytos=cyto_path,
     output:
         "{output_dir}/{case}/{somatic}_{normal}/segmented.RDS",
@@ -565,8 +547,7 @@ rule ploidetect:
         preseg=rules.preseg.output,
         install=(
             rules.ploidetect_install.output
-            if not workflow.use_singularity
-            and "install_ploidetect" in config.keys()
+            if "install_ploidetect" in config.keys()
             and config["install_ploidetect"]
             else __file__
         ),
