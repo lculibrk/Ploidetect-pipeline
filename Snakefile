@@ -227,7 +227,13 @@ rule download_genome:
 
 ## Ploidetect prep
 rule germline_cov:
-    """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins"""
+    """Compute per-base depth in germline bam, convert to .bed format and pile up into equal-coverage bins.
+
+    Debug:
+        SDEV-4682 - input/output missing file errors with singularity can require bind args.
+            Add the additional snakemake arguments to bind the folders.
+                eg. snakemake --singularity-args '--bind <bam_folder> --bind $HOME'
+    """
     input:
         bam=lambda w: config["bams"][w.case]["normal"][w.normal],
         output_dir=output_dir,
