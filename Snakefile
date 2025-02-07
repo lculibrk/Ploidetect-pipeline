@@ -56,12 +56,9 @@ if not genome_fasta:
 
 include: "defaults.smk"
 
-# Print config settings
-pprint.pprint(config)
-print(f"{genome_fasta=}")
 
 output_dir = config["output_dir"]
-scripts_dir = os.path.join(workflow.basedir, "scripts")
+
 array_positions = (
     config["array_positions"][config["genome_name"]]
     if os.path.exists(config["array_positions"][config["genome_name"]])
@@ -104,17 +101,26 @@ cyto_path = config["cyto_path"] if "cyto_path" in config else ""
 if cyto_path == "auto":
     ## Try to automatically get cytobands based on genome name
     hgver = config["genome_name"]
+    print(f"Attempting download of cytoband from ucsc")
     connec = requests.get(f"http://hgdownload.cse.ucsc.edu/goldenpath/{hgver}/database/cytoBand.txt.gz")
     if connec.status_code == 200:
         cyto_path = f"resources/{hgver}/cytobands.txt"
         cyto_arg = f"-c {cyto_path}"
     else:
-        raise WorkflowSetupError("Cytoband file is set to auto-detect, but could not download cytoband file. Make sure you didn't misspell the genome file, leave the cyto_path blank in the config, or explicitly set a path for it")
-
+        raise WorkflowSetupError(
+            "Cytoband file is set to auto-detect, but could not download cytoband file. "
+            "Make sure you didn't misspell the genome file, leave the cyto_path blank in the config, "
+            "or explicitly set a path for it")
 else:
     cyto_arg = f"-c {cyto_path}" if cyto_path else ""
 
 print(cyto_path)
+# Print config settings
+pprint.pprint(config)
+print(f"{genome_fasta=}")
+# script files should be relative to this Snakefile
+scripts_dir = os.path.join(workflow.current_basedir, "scripts")
+print(f"{scripts_dir=}")
 
 ## Parse sample information
 bams_dict = config["bams"]
