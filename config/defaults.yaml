@@ -54,11 +54,12 @@ chromosome_defaults:
 mem_per_cpu: 7900
 
 # Blank if want to use only automated purity/ploidy
+# COLO829 is pseudo-tetraploid karyotype with losses
 models:
-    COLO829-TestA:
+    COLO829-TestB:
         A36971:
             tp: 1
-            ploidy: 3
+            ploidy: 4
 
 ## genome
 genome:
