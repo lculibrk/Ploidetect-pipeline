@@ -63,9 +63,9 @@ models:
 ## genome
 genome:
     hg19:
-        /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
+        resources/hg19/genome.fa
     hg38:
-        /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
+        resources/hg38/genome.fa
 array_positions:
     hg19:
         "resources/snp_arrays/hg19/SNP_array_positions.txt"
