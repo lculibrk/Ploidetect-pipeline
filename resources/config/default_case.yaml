@@ -5,7 +5,4 @@ bams:
             hartwigT: resources/test_bams/COLO829T.bam
         normal:
             hartwigR: resources/test_bams/COLO829R.bam
-
-# genome_name should match bams
-genome_name:
-    "hg19"
+genome_name: hg19
