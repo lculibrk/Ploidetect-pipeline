@@ -1,5 +1,6 @@
 import glob
 import os
+import pprint
 import sys
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 import requests
@@ -55,10 +56,11 @@ if not genome_fasta:
 
 include: "defaults.smk"
 
+# Print config settings
+pprint.pprint(config)
 print(f"{genome_fasta=}")
 
 output_dir = config["output_dir"]
-
 scripts_dir = os.path.join(workflow.basedir, "scripts")
 array_positions = (
     config["array_positions"][config["genome_name"]]

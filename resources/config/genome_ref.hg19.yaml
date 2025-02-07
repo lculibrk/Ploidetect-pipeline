@@ -2,7 +2,7 @@
 # TODO: standard config should not refer to GSC - sync w/ gsc_build_config.py
 genome:
     hg19:
-        /gsc/resources/Homo_sapiens_genomes/hg19a/genome/fasta/hg19a.fa
+        resources/hg38/genome.fa
 annotation:
     hg19:
         /gsc/resources/annotation/Homo_sapiens.GRCh37.87.gtf
