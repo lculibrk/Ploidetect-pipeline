@@ -1,8 +1,9 @@
 # Reference data.  Selected by 'genome_name' value.
 # TODO: standard config should not refer to GSC - sync w/ gsc_build_config.py
+# equivalent to /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
 genome:
     hg38:
-        /gsc/resources/Homo_sapiens_genomes/hg38_no_alt/genome/fasta/hg38_no_alt.fa
+        resources/hg38/genome.fa
 annotation:
     hg38:
         /gsc/resources/annotation/Homo_sapiens.GRCh38.100.gtf
