@@ -552,7 +552,7 @@ rule preseg:
     log:
         "{output_dir}/logs/preseg.{case}.{somatic}_{normal}.log",
     shell:
-        "Rscript {scripts_dir}/prep_ploidetect2.R -i {input[0]} -c {input.cytos} -o {output}"
+        "Rscript {params.scripts_dir}/prep_ploidetect2.R -i {input[0]} -c {input.cytos} -o {output}"
 
 
 rule ploidetect:
