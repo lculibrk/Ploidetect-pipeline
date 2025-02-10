@@ -17,8 +17,10 @@ CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://lculibrk/ploidetect:
 ## Load config values
 print(f"Loading default config values from: {workflow.basedir}/config")
 configfile: os.path.join(workflow.basedir, "config/defaults.yaml")
-configfile: os.path.join(workflow.basedir, "config/samples.yaml")
 configfile: os.path.join(workflow.basedir, "config/parameters.yaml")
+# Example samples
+# configfile: os.path.join(workflow.basedir, "config/samples.yaml")
+
 
 MEM_PER_CPU = config["mem_per_cpu"]
 hgver = config["genome_name"]
