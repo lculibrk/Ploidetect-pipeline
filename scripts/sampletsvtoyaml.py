@@ -2,8 +2,8 @@
 """sampletsvtoyaml.py: Converts tab-separated sample information to configuration file for Ploidetect"""
 
 import argparse
+import logging
 import os
-import warnings
 
 import yaml
 
@@ -35,22 +35,22 @@ if not os.path.exists(parser.output_path):
     os.mkdir(parser.output_path)
 
 with open(parser.tsv_file) as f:
-    f = [l.strip().split("\t") for l in f.readlines()]
+    file_rows = [line.strip().split("\t") for line in f.readlines()]
 
 lineno = 0
 out_dict = {"bams": {}}
-for l in f:
-    samplename = l[0]
-    identity = l[1]
-    lib = l[2]
-    path = l[3]
+for row in file_rows:
+    samplename = row[0]
+    identity = row[1]
+    lib = row[2]
+    path = row[3]
     lineno = lineno + 1
-    if len(l) != 4:
+    if len(row) != 4:
         raise inputFileError(
             f"Input samples file does not have four tab-separated columns! Error detected in line {lineno}"
         )
     if not os.path.exists(path):
-        warnings.Warning(
+        logging.warning(
             f"Input samples file points to a file which does not exist. Problematic path: {path} on line {lineno}. If this is on purpose, ignore this warning"
         )
     if not bool(out_dict["bams"]):
