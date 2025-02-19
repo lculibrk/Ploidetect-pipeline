@@ -557,11 +557,11 @@ rule mergedbed:
     log:
         "{output_dir}/logs/mergedbed.{case}.{somatic}_{normal}.log",
     shell:
+        ## Cuts out any "chr" if using hg38
         "paste {input.tumour} <(cut -f4 {input.normal}) <(cut -f4 {input.loh}) <(cut -f4 {input.gc})"
         "| sed 's/chr//g' > {output}"
         " 2> {log}"
         " && ls -l {output} >> {log}"
-        ## Cuts out any "chr" if using hg38
 
 
 rule preseg:
