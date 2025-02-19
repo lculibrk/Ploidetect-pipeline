@@ -38,7 +38,7 @@ format-code:  ## apply standard formatter like snakefmt and black to scripts.
 	$(VENV_PIP)/bin/isort --profile black scripts
 	$(VENV_PIP)/bin/black scripts *.py
 	# Snakefile formatting
-	$(VENV_PIP)/bin/snakefmt Snakefile* scripts
+	$(VENV_PIP)/bin/snakefmt Snakefile* *.smk
 
 lint: format-code  ## Code formatting and quality checkers
 	$(VENV_PIP)/bin/flake8 --ignore E501 scripts
