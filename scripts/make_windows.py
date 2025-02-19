@@ -29,45 +29,40 @@ chrom = None
 # Loop over input lines
 for line in infile:
     # File handling and santisation
-    line = line.rstrip("\n")
-    line = line.split("\t")
+    line_columns = line.rstrip("\n").split("\t")
     # If first iteration, set chrom to the first chromosome value
     if not chrom:
-        chrom = line[CHROM]
+        chrom = line_columns[CHROM]
     # Check if new chromosome
-    if chrom != line[CHROM]:
+    if chrom != line_columns[CHROM]:
         # Output last chromosome, previous end (start), end of chromosome (lastknownend), count
-        out = [chrom, start, lastknownend, count]
         # Convert out to strings and join them with tabs
-        out = [str(x) for x in out]
-        out = "\t".join(out)
+        out = "\t".join([str(x) for x in (chrom, start, lastknownend, count)])
         # Print to stdout
         print(out)
         # Set new chromosome
-        chrom = line[CHROM]
+        chrom = line_columns[CHROM]
         # Set new start
-        start = int(line[START])
+        start = int(line_columns[START])
         # STOP THE COUNT!
         count = 0
     # Check if all is normal and we continue with creating the bin
     if count < threshold:
         # Add to count
-        count += int(line[COUNT])
+        count += int(line_columns[COUNT])
         # Record end position of the count (in case new chromosome is skipped to)
-        lastknownend = int(line[STOP])
+        lastknownend = int(line_columns[STOP])
     # If count exceeds threshold
     if count >= threshold:
         # Record end position
-        stop = int(line[STOP])
+        stop = int(line_columns[STOP])
         # Record chromosome
-        chrom = line[CHROM]
+        chrom = line_columns[CHROM]
         # Output chromosome, start of bin, end of bin, count
-        out = [chrom, start, stop, count]
         # Convert out to strings and join them with tabs
-        out = [str(x) for x in out]
-        out = "\t".join(out)
+        out = "\t".join([str(x) for x in (chrom, start, stop, count)])
         # Set new start
-        start = int(line[STOP])
+        start = int(line_columns[STOP])
         # STOP THE COUNT!
         count = 0
         # Print to stdout
