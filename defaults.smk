@@ -6,11 +6,18 @@
 # snakefmt cannot understand 'configfile:' inside an if statement and will fail on this script
 if "ref_chromosomes" not in config:
     for ref in ["hg19", "hg38"]:
-        def_ref_yaml = os.path.join(workflow.basedir, f"resources/config/genome_ref.{ref}.yaml")
+        def_ref_yaml = os.path.join(
+            workflow.basedir, f"resources/config/genome_ref.{ref}.yaml"
+        )
         logger.warning(f"Loading reference defaults from: {def_ref_yaml}")
+
         configfile: def_ref_yaml
+
+
 if "bams" not in config:
     logger.error(f"No patient bams given.  Using demo test case.")
+
     configfile: os.path.join(workflow.basedir, "resources/config/default_case.yaml")
+
 
 configfile: os.path.join(workflow.basedir, "resources/config/default_run_params.yaml")

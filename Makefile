@@ -23,24 +23,26 @@ conda_snakemake:  ## conda install of snakemake into a new '$(VENV_CONDA)'.  Aft
 	echo "  source $(VENV_CONDA)/bin/activate"
 
 pip_venv:  ## pip install is much faster and smaller, but missing some advanced snakemake features
-	# python -m venv $(VENV_PIP)
+	python -m venv $(VENV_PIP)
 	# if the local python version is not installed/working use python from conda_venv
-	$(VENV_CONDA)/bin/python -m venv $(VENV_PIP)
+	# $(VENV_CONDA)/bin/python -m venv $(VENV_PIP)
 	$(VENV_PIP)/bin/pip install -U pip
 
 pip_snakemake:  ## python install
-	$(VENV_PIP)/bin/pip install -U $(SNAKEMAKE_VER) snakefmt isort black flake8 mypy pylint pydocstyle
+	$(VENV_PIP)/bin/pip install -U pip
+	$(VENV_PIP)/bin/pip install -U $(SNAKEMAKE_VER) snakefmt
 
 format-code:  ## apply standard formatter like snakefmt and black to scripts.
-# python script formatting
-	isort --profile black scripts
-	black scripts
-# Snakefile formatting
-	snakefmt Snakefile* scripts
+	# python script formatting
+	$(VENV_PIP)/bin/pip install -U snakefmt isort black flake8 mypy pylint pydocstyle
+	$(VENV_PIP)/bin/isort --profile black scripts
+	$(VENV_PIP)/bin/black scripts *.py
+	# Snakefile formatting
+	$(VENV_PIP)/bin/snakefmt Snakefile* *.smk
 
 lint: format-code  ## Code formatting and quality checkers
-	flake8 --ignore E501 scripts
-	mypy --ignore-missing-imports scripts/*.py
+	$(VENV_PIP)/bin/flake8 --ignore E501 scripts
+	$(VENV_PIP)/bin/mypy --ignore-missing-imports scripts/*.py
 
 lint-snakefiles: format-code  ## snakemake linting suggestions
 	snakemake Snakefile.gsc.smk --lint
