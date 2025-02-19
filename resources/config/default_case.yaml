@@ -1,7 +1,8 @@
-# A test example of bam setup
+
 bams:
-    COLO829_mini_test:
+    COLO829_mini:
         somatic:
             hartwigT: resources/test_bams/COLO829T.bam
         normal:
             hartwigR: resources/test_bams/COLO829R.bam
+genome_name: hg19
