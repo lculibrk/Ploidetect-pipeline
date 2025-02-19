@@ -29,12 +29,12 @@ parser.add_argument(
     help="Should the output be concatenated onto an existing samples.yaml? Accepts True or False",
 )
 
-parser = parser.parse_args()
+args = parser.parse_args()
 
-if not os.path.exists(parser.output_path):
-    os.mkdir(parser.output_path)
+if not os.path.exists(args.output_path):
+    os.mkdir(args.output_path)
 
-with open(parser.tsv_file) as f:
+with open(args.tsv_file) as f:
     file_rows = [line.strip().split("\t") for line in f.readlines()]
 
 lineno = 0
@@ -57,14 +57,14 @@ for row in file_rows:
         out_dict["bams"][samplename] = {}
     out_dict["bams"][samplename][identity] = {lib: path}
 
-if parser.concat == "True":
+if args.concat == "True":
     out_dict = out_dict["bams"]
-    with open(os.path.join(parser.output_path, "samples.yaml"), "r") as f:
+    with open(os.path.join(args.output_path, "samples.yaml"), "r") as f:
         cur_dict = yaml.load(f, Loader=yaml.FullLoader)
         n_dict = {**cur_dict["bams"], **out_dict}
         n_dict = {"bams": n_dict}
-    with open(os.path.join(parser.output_path, "samples.yaml"), "w") as f:
+    with open(os.path.join(args.output_path, "samples.yaml"), "w") as f:
         yaml.dump(n_dict, f, default_flow_style=False)
 else:
-    with open(os.path.join(parser.output_path, "samples.yaml"), "w") as f:
+    with open(os.path.join(args.output_path, "samples.yaml"), "w") as f:
         yaml.dump(out_dict, f, default_flow_style=False)
